@@ -105,6 +105,7 @@
         <div id="instruction-view" class="hidden w-full max-w-md instruction-card bg-white p-8 rounded-3xl shadow-xl border-t-8 border-blue-500 text-center space-y-6">
             <div id="instruction-icon" class="text-6xl">👂</div>
             <h3 id="instruction-title" class="text-3xl font-bold text-gray-800"></h3>
+            <p id="instruction-desc" class="text-gray-500 text-lg"></p>
             <button onclick="startLevelFromInstruction()" class="w-full py-4 bg-blue-600 text-white rounded-full font-bold text-2xl shadow-lg active:scale-95 transition-transform">
                 ¡Empezar!
             </button>
@@ -166,7 +167,8 @@
             'ola': 'o la',
             'lulo': 'lu lo',
             'pala': 'pa la',
-            'pelo': 'pe lo'
+            'pelo': 'pe lo',
+            'lu': 'loo' // 使用近似音標記，確保男性引擎發音更接近嚕
         };
 
         const UNITS = {
@@ -175,9 +177,9 @@
         };
 
         const INSTRUCTIONS = {
-            1: { icon: '👂', title: 'Escucha y Elige' },
-            2: { icon: '📖', title: 'Mira y Escucha' },
-            3: { icon: '✍️', title: 'Escucha y Escribe' }
+            1: { icon: '👂', title: 'Escucha y Elige', desc: 'Escucha el sonido y toca la palabra correcta.' },
+            2: { icon: '📖', title: 'Mira y Escucha', desc: 'Mira la palabra y escucha su sonido.' },
+            3: { icon: '✍️', title: 'Escucha y Escribe', desc: 'Escucha el sonido y escribe la palabra.' }
         };
 
         let state = {
@@ -204,15 +206,32 @@
         window.speechSynthesis.onvoiceschanged = loadVoices;
         loadVoices();
 
+        /**
+         * 播放語音
+         * @param {string} text 播放內容
+         * @param {function} callback 播放結束後的動作
+         */
         function speak(text, callback) {
             window.speechSynthesis.cancel();
-            const processedText = SYLLABLE_HINTS[text.toLowerCase()] || text;
+            const lowerText = text.toLowerCase();
+            const processedText = SYLLABLE_HINTS[lowerText] || text;
             const ut = new SpeechSynthesisUtterance(processedText);
-            ut.voice = state.voiceToggle ? state.voices.female : state.voices.male;
-            state.voiceToggle = !state.voiceToggle;
+            
+            // 邏輯修改：如果單字是 lu，強制使用男性聲音，不參與男女聲切換
+            if (lowerText === 'lu') {
+                ut.voice = state.voices.male;
+            } else {
+                ut.voice = state.voiceToggle ? state.voices.female : state.voices.male;
+                state.voiceToggle = !state.voiceToggle;
+            }
+            
             ut.lang = 'es-ES';
-            ut.rate = 0.7;
-            if (callback) ut.onend = callback;
+            ut.rate = 0.65;
+            
+            if (callback) {
+                ut.onend = () => callback();
+            }
+            
             window.speechSynthesis.speak(ut);
         }
 
@@ -237,6 +256,7 @@
             const ins = INSTRUCTIONS[level];
             document.getElementById('instruction-icon').innerText = ins.icon;
             document.getElementById('instruction-title').innerText = ins.title;
+            document.getElementById('instruction-desc').innerText = ins.desc;
             speak(ins.title);
         }
 
@@ -313,8 +333,7 @@
             document.getElementById('star-count').innerText = state.stars;
 
             if (state.currentLevel === 1) {
-                // L1: 聽選字，新增確認按鈕
-                const soundBtn = createSoundBtn(q.target, 'w-36 h-36 bg-blue-500 text-6xl');
+                const soundBtn = createSoundBtn(q.target, 'w-32 h-32 bg-blue-500 text-5xl');
                 const confirmBtn = createConfirmBtn(() => handleAnswer(state.selectedOption === q.target));
                 const grid = document.createElement('div');
                 grid.className = "grid grid-cols-2 gap-4 w-full mb-6";
@@ -341,19 +360,17 @@
                 speak(q.target);
 
             } else if (state.currentLevel === 2) {
-                // L2: 看字選音 - 文字和音檔在同一行 (橫向佈局)
-                const wordRow = document.createElement('div');
-                wordRow.className = "flex items-center justify-center space-x-6 mb-8";
+                const headerRow = document.createElement('div');
+                headerRow.className = "flex items-center justify-center space-x-6 mb-8";
                 
                 const word = document.createElement('div');
                 word.className = "text-8xl font-bold text-gray-800";
                 word.innerText = q.target;
                 
-                const mainSoundBtn = createSoundBtn(q.target, 'w-24 h-24 bg-blue-500 text-4xl mb-0');
-                
-                wordRow.appendChild(word);
-                wordRow.appendChild(mainSoundBtn);
-                
+                const mainSoundBtn = createSoundBtn(q.target, 'w-24 h-24 bg-blue-500 text-4xl');
+                headerRow.appendChild(word);
+                headerRow.appendChild(mainSoundBtn);
+
                 const confirmBtn = createConfirmBtn(() => handleAnswer(state.selectedOption.c));
                 const grid = document.createElement('div');
                 grid.className = "grid grid-cols-2 gap-4 w-full mb-6";
@@ -375,13 +392,12 @@
                     grid.appendChild(btn);
                 });
                 
-                container.appendChild(wordRow);
+                container.appendChild(headerRow);
                 container.appendChild(grid);
                 container.appendChild(confirmBtn);
                 speak(q.target);
 
             } else if (state.currentLevel === 3) {
-                // L3: 聽寫 - 文字和音檔在同一行
                 const headerRow = document.createElement('div');
                 headerRow.className = "flex items-center justify-center space-x-6 mb-4";
 
@@ -392,7 +408,7 @@
                     headerRow.appendChild(hint);
                 }
                 
-                const soundBtn = createSoundBtn(q.target, 'w-24 h-24 bg-purple-500 text-4xl mb-0');
+                const soundBtn = createSoundBtn(q.target, 'w-24 h-24 bg-purple-500 text-4xl');
                 headerRow.appendChild(soundBtn);
                 
                 const canvasBox = document.createElement('div');
@@ -455,6 +471,7 @@
             btn.onclick = () => speak(val);
             return btn;
         }
+
         function createConfirmBtn(fn) {
             const btn = document.createElement('button');
             btn.className = "w-full py-5 bg-green-500 text-white rounded-full font-bold text-2xl shadow-lg opacity-50";
@@ -463,6 +480,7 @@
             btn.onclick = fn;
             return btn;
         }
+
         function createUtilityBtn(txt, fn, primary=false) {
             const btn = document.createElement('button');
             btn.className = `flex-1 py-5 rounded-2xl font-bold text-xl ${primary ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-200 text-gray-700'}`;
@@ -472,16 +490,26 @@
         }
 
         function handleAnswer(isCorrect) {
+            const nextAction = () => {
+                setTimeout(() => {
+                    if(state.currentIndex >= 10) {
+                        showCompletion();
+                    } else {
+                        renderQuestion();
+                    }
+                }, 600);
+            };
+
             if(isCorrect) {
                 state.stars++;
-                speak("Muy bien");
+                speak("Muy bien", nextAction);
                 const icon = document.createElement('div');
                 icon.className = "fixed inset-0 flex items-center justify-center text-9xl pointer-events-none star-animation z-50";
                 icon.innerHTML = "☺️";
                 document.body.appendChild(icon);
                 setTimeout(() => icon.remove(), 1000);
             } else {
-                speak("Otra vez");
+                speak("Otra vez", nextAction);
                 const icon = document.createElement('div');
                 icon.className = "fixed inset-0 flex items-center justify-center text-5xl font-bold text-red-500 pointer-events-none z-50";
                 icon.innerHTML = "Otra vez";
@@ -492,14 +520,6 @@
             }
             
             state.currentIndex++;
-            
-            setTimeout(() => {
-                if(state.currentIndex >= 10) {
-                    showCompletion();
-                } else {
-                    renderQuestion();
-                }
-            }, 600);
         }
 
         function showCompletion() {
