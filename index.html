@@ -168,7 +168,8 @@
             'lulo': 'lu lo',
             'pala': 'pa la',
             'pelo': 'pe lo',
-            'lu': 'loo' // 使用近似音標記，確保男性引擎發音更接近嚕
+            'lo': 'low', // 更新發音導引
+            'lu': 'loo'
         };
 
         const UNITS = {
@@ -217,8 +218,8 @@
             const processedText = SYLLABLE_HINTS[lowerText] || text;
             const ut = new SpeechSynthesisUtterance(processedText);
             
-            // 邏輯修改：如果單字是 lu，強制使用男性聲音，不參與男女聲切換
-            if (lowerText === 'lu') {
+            // 修正邏輯：如果單字是 'lu' 或 'lo'，強制使用男性語音
+            if (lowerText === 'lu' || lowerText === 'lo') {
                 ut.voice = state.voices.male;
             } else {
                 ut.voice = state.voiceToggle ? state.voices.female : state.voices.male;
