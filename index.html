@@ -83,9 +83,9 @@
                 <div class="bg-white p-6 rounded-3xl shadow-md border-b-8 border-blue-200">
                     <h2 class="text-2xl font-bold text-blue-800 mb-4">Unidad A: a e i o u</h2>
                     <div class="grid grid-cols-3 gap-3">
-                        <button onclick="showInstruction('A', 1)" id="btn-A-1" class="p-4 rounded-2xl bg-blue-50 text-blue-600 font-bold">Nivel 1</button>
-                        <button onclick="showInstruction('A', 2)" id="btn-A-2" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold cursor-not-allowed" disabled>Nivel 2</button>
-                        <button onclick="showInstruction('A', 3)" id="btn-A-3" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold cursor-not-allowed" disabled>Nivel 3</button>
+                        <button onclick="handleUnitClick('A', 1)" id="btn-A-1" class="p-4 rounded-2xl bg-blue-50 text-blue-600 font-bold">Nivel 1</button>
+                        <button onclick="handleUnitClick('A', 2)" id="btn-A-2" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 2</button>
+                        <button onclick="handleUnitClick('A', 3)" id="btn-A-3" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 3</button>
                     </div>
                 </div>
 
@@ -93,9 +93,9 @@
                 <div class="bg-white p-6 rounded-3xl shadow-md border-b-8 border-purple-200">
                     <h2 class="text-2xl font-bold text-purple-800 mb-4">Unidad B: p / l</h2>
                     <div class="grid grid-cols-3 gap-3">
-                        <button onclick="handleUnitBClick('B', 1)" id="btn-B-1" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 1</button>
-                        <button onclick="handleUnitBClick('B', 2)" id="btn-B-2" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 2</button>
-                        <button onclick="handleUnitBClick('B', 3)" id="btn-B-3" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 3</button>
+                        <button onclick="handleUnitClick('B', 1)" id="btn-B-1" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 1</button>
+                        <button onclick="handleUnitClick('B', 2)" id="btn-B-2" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 2</button>
+                        <button onclick="handleUnitClick('B', 3)" id="btn-B-3" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 3</button>
                     </div>
                 </div>
             </div>
@@ -168,7 +168,7 @@
             'lulo': 'lu lo',
             'pala': 'pa la',
             'pelo': 'pe lo',
-            'lo': 'low', // 更新發音導引
+            'lo': 'low',
             'lu': 'loo'
         };
 
@@ -179,7 +179,7 @@
 
         const INSTRUCTIONS = {
             1: { icon: '👂', title: 'Escucha y Elige', desc: 'Escucha el sonido y toca la palabra correcta.' },
-            2: { icon: '📖', title: 'Mira y Escucha', desc: 'Mira la palabra y escucha su sonido.' },
+            2: { icon: '📖', title: 'Mira y Elige', desc: 'Escucha el sonido y toca la palabra escrita correcta.' },
             3: { icon: '✍️', title: 'Escucha y Escribe', desc: 'Escucha el sonido y escribe la palabra.' }
         };
 
@@ -195,7 +195,7 @@
             voices: { male: null, female: null },
             voiceToggle: true,
             isRetrying: false,
-            unitBClicks: { 1:0, 2:0, 3:0 }
+            clickCounts: { A: {1:0, 2:0, 3:0}, B: {1:0, 2:0, 3:0} }
         };
 
         function loadVoices() {
@@ -207,18 +207,12 @@
         window.speechSynthesis.onvoiceschanged = loadVoices;
         loadVoices();
 
-        /**
-         * 播放語音
-         * @param {string} text 播放內容
-         * @param {function} callback 播放結束後的動作
-         */
         function speak(text, callback) {
             window.speechSynthesis.cancel();
             const lowerText = text.toLowerCase();
             const processedText = SYLLABLE_HINTS[lowerText] || text;
             const ut = new SpeechSynthesisUtterance(processedText);
             
-            // 修正邏輯：如果單字是 'lu' 或 'lo'，強制使用男性語音
             if (lowerText === 'lu' || lowerText === 'lo') {
                 ut.voice = state.voices.male;
             } else {
@@ -236,14 +230,15 @@
             window.speechSynthesis.speak(ut);
         }
 
-        function handleUnitBClick(unit, level) {
+        // 統一處理 A 與 B 單元點擊邏輯
+        function handleUnitClick(unit, level) {
             const isUnlocked = state.teacherMode || (state.unlocked[unit] >= level);
             if (isUnlocked) {
                 showInstruction(unit, level);
             } else {
-                state.unitBClicks[level]++;
-                if (state.unitBClicks[level] >= 3) {
-                    state.unitBClicks[level] = 0;
+                state.clickCounts[unit][level]++;
+                if (state.clickCounts[unit][level] >= 3) {
+                    state.clickCounts[unit][level] = 0;
                     showInstruction(unit, level);
                 }
             }
@@ -317,8 +312,8 @@
                         btn.disabled = false;
                         btn.className = (u === 'A' ? "p-4 rounded-2xl bg-blue-100 text-blue-700 font-bold" : "p-4 rounded-2xl bg-purple-100 text-purple-700 font-bold");
                     } else {
-                        btn.disabled = (u === 'A'); 
-                        btn.className = "p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold " + (u === 'A' ? "cursor-not-allowed" : "");
+                        btn.disabled = false; // 為了讓連點三下能生效，按鍵不鎖死但外觀顯示灰色
+                        btn.className = "p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold";
                     }
                 }
             });
@@ -334,6 +329,7 @@
             document.getElementById('star-count').innerText = state.stars;
 
             if (state.currentLevel === 1) {
+                // 聽力關卡：點擊發音，選擇文字
                 const soundBtn = createSoundBtn(q.target, 'w-32 h-32 bg-blue-500 text-5xl');
                 const confirmBtn = createConfirmBtn(() => handleAnswer(state.selectedOption === q.target));
                 const grid = document.createElement('div');
@@ -361,44 +357,35 @@
                 speak(q.target);
 
             } else if (state.currentLevel === 2) {
-                const headerRow = document.createElement('div');
-                headerRow.className = "flex items-center justify-center space-x-6 mb-8";
-                
-                const word = document.createElement('div');
-                word.className = "text-8xl font-bold text-gray-800";
-                word.innerText = q.target;
-                
-                const mainSoundBtn = createSoundBtn(q.target, 'w-24 h-24 bg-blue-500 text-4xl');
-                headerRow.appendChild(word);
-                headerRow.appendChild(mainSoundBtn);
-
-                const confirmBtn = createConfirmBtn(() => handleAnswer(state.selectedOption.c));
+                // Nivel 2 改成文字題目：聽發音，選出正確的文字選項
+                const soundBtn = createSoundBtn(q.target, 'w-32 h-32 bg-blue-500 text-5xl mb-4');
+                const confirmBtn = createConfirmBtn(() => handleAnswer(state.selectedOption === q.target));
                 const grid = document.createElement('div');
                 grid.className = "grid grid-cols-2 gap-4 w-full mb-6";
-                const opts = [{v: q.target, c: true}, {v: q.distractor, c: false}].sort(() => Math.random() - 0.5);
+                const options = [q.target, q.distractor].sort(() => Math.random() - 0.5);
                 
-                opts.forEach((opt, i) => {
+                options.forEach((opt, i) => {
                     const btn = document.createElement('button');
-                    btn.className = "bg-white p-8 rounded-3xl text-5xl border-4 border-transparent shadow-md transition-all";
-                    btn.id = `audio-opt-${i}`;
-                    btn.innerHTML = "🔊";
+                    btn.className = "bg-white p-8 rounded-3xl text-4xl font-bold shadow-md border-4 border-transparent transition-all";
+                    btn.innerText = opt;
+                    btn.id = `opt-l2-${i}`;
                     btn.onclick = () => {
-                        document.querySelectorAll('[id^="audio-opt-"]').forEach(el => el.classList.remove('selected-option'));
+                        document.querySelectorAll('[id^="opt-l2-"]').forEach(el => el.classList.remove('selected-option'));
                         btn.classList.add('selected-option');
                         state.selectedOption = opt;
-                        speak(opt.v);
                         confirmBtn.disabled = false;
                         confirmBtn.classList.remove('opacity-50');
                     };
                     grid.appendChild(btn);
                 });
-                
-                container.appendChild(headerRow);
+
+                container.appendChild(soundBtn);
                 container.appendChild(grid);
                 container.appendChild(confirmBtn);
                 speak(q.target);
 
             } else if (state.currentLevel === 3) {
+                // 寫字關卡
                 const headerRow = document.createElement('div');
                 headerRow.className = "flex items-center justify-center space-x-6 mb-4";
 
