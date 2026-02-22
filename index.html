@@ -253,6 +253,7 @@
             const processedText = SYLLABLE_HINTS[lowerText] || text;
             const ut = new SpeechSynthesisUtterance(processedText);
             
+            // 強制 ala 和 ola 使用男性聲音
             if (lowerText === 'lu' || lowerText === 'lo' || lowerText === 'ala' || lowerText === 'ola') {
                 ut.voice = state.voices.male;
             } else {
