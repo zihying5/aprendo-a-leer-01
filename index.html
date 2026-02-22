@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aprendo a Leer</title>
+    <title>Aprendo a Leer - Práctica de Alfabetización</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;700&display=swap');
@@ -49,11 +49,20 @@
             from { transform: translateY(20px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
+
+        .flashcard-enter {
+            animation: fadeInRight 0.4s ease-out;
+        }
+
+        @keyframes fadeInRight {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
     </style>
 </head>
 <body class="h-screen flex flex-col">
 
-    <!-- 頁首 / 進度條 -->
+    <!-- 頂部欄 / 進度條 -->
     <header id="game-header" class="hidden p-4 bg-white shadow-sm border-b">
         <div class="flex justify-between items-center mb-3">
             <button onclick="goBack()" class="text-blue-500 font-bold flex items-center">
@@ -82,7 +91,8 @@
                 <!-- Unidad A -->
                 <div class="bg-white p-6 rounded-3xl shadow-md border-b-8 border-blue-200">
                     <h2 class="text-2xl font-bold text-blue-800 mb-4">Unidad A: a e i o u</h2>
-                    <div class="grid grid-cols-3 gap-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="handleUnitClick('A', 0)" id="btn-A-0" class="p-4 rounded-2xl bg-orange-100 text-orange-600 font-bold">Nivel 0 (Repaso)</button>
                         <button onclick="handleUnitClick('A', 1)" id="btn-A-1" class="p-4 rounded-2xl bg-blue-50 text-blue-600 font-bold">Nivel 1</button>
                         <button onclick="handleUnitClick('A', 2)" id="btn-A-2" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 2</button>
                         <button onclick="handleUnitClick('A', 3)" id="btn-A-3" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 3</button>
@@ -92,7 +102,8 @@
                 <!-- Unidad B -->
                 <div class="bg-white p-6 rounded-3xl shadow-md border-b-8 border-purple-200">
                     <h2 class="text-2xl font-bold text-purple-800 mb-4">Unidad B: p / l</h2>
-                    <div class="grid grid-cols-3 gap-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="handleUnitClick('B', 0)" id="btn-B-0" class="p-4 rounded-2xl bg-orange-100 text-orange-600 font-bold">Nivel 0 (Repaso)</button>
                         <button onclick="handleUnitClick('B', 1)" id="btn-B-1" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 1</button>
                         <button onclick="handleUnitClick('B', 2)" id="btn-B-2" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 2</button>
                         <button onclick="handleUnitClick('B', 3)" id="btn-B-3" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 3</button>
@@ -101,24 +112,37 @@
             </div>
         </div>
 
-        <!-- 說明畫面 -->
+        <!-- 指示畫面 -->
         <div id="instruction-view" class="hidden w-full max-w-md instruction-card bg-white p-8 rounded-3xl shadow-xl border-t-8 border-blue-500 text-center space-y-6">
             <div id="instruction-icon" class="text-6xl">👂</div>
             <h3 id="instruction-title" class="text-3xl font-bold text-gray-800"></h3>
             <p id="instruction-desc" class="text-gray-500 text-lg"></p>
+
             <button onclick="startLevelFromInstruction()" class="w-full py-4 bg-blue-600 text-white rounded-full font-bold text-2xl shadow-lg active:scale-95 transition-transform">
                 ¡Empezar!
             </button>
         </div>
 
-        <!-- 遊戲畫面 -->
+        <!-- 遊戲關卡畫面 -->
         <div id="level-view" class="hidden w-full max-w-md flex flex-col items-center h-full">
             <div id="question-container" class="w-full flex flex-col items-center justify-center flex-grow space-y-6">
                 <!-- 動態注入內容 -->
             </div>
         </div>
 
-        <!-- 比較畫面 (L3) -->
+        <!-- 複習模式畫面 (Nivel 0) -->
+        <div id="repaso-view" class="hidden w-full max-w-md flex flex-col items-center h-full space-y-8">
+            <div id="flashcard-container" class="flex-grow flex flex-col items-center justify-center w-full">
+                <!-- 動態注入內容 -->
+            </div>
+            <div class="w-full pb-10">
+                <button onclick="nextFlashcard()" id="next-flashcard-btn" class="w-full py-5 bg-orange-500 text-white rounded-full font-bold text-2xl shadow-lg">
+                    Siguiente
+                </button>
+            </div>
+        </div>
+
+        <!-- 寫字比對畫面 (L3) -->
         <div id="compare-view" class="hidden w-full max-w-md flex flex-col items-center space-y-6">
             <h3 class="text-2xl font-bold text-gray-700">Compara tu escritura:</h3>
             <div class="w-full grid grid-cols-2 gap-4">
@@ -141,23 +165,24 @@
             </div>
         </div>
 
-        <!-- 結算畫面 -->
+        <!-- 完成畫面 -->
         <div id="complete-view" class="hidden text-center space-y-8">
             <div id="result-medal" class="bg-yellow-400 w-32 h-32 rounded-full flex items-center justify-center text-6xl shadow-xl mx-auto mb-4 star-animation">🏅</div>
             <div>
                 <h2 id="result-title" class="text-4xl font-bold text-gray-800 mb-2">¡Excelente! ☺️</h2>
-                <p id="result-score" class="text-xl text-gray-600 font-bold"></p>
+                <p id="result-score" class="text-xl text-gray-600 font-bold mb-4"></p>
             </div>
-            <div class="flex flex-col space-y-3 w-64 mx-auto">
+            <div id="complete-actions" class="flex flex-col space-y-3 w-64 mx-auto">
                 <button id="next-level-btn" onclick="goToNextLevel()" class="px-8 py-4 bg-blue-600 text-white rounded-full font-bold text-xl shadow-lg">Siguiente Nivel</button>
+                <button id="retry-btn" onclick="retryLevel()" class="hidden px-8 py-4 bg-orange-500 text-white rounded-full font-bold text-xl shadow-lg">Otra vez</button>
                 <button onclick="goBack()" class="px-8 py-4 bg-white text-gray-600 border rounded-full font-bold text-lg">Ir al Menú</button>
             </div>
         </div>
     </main>
 
-    <!-- 教師模式切換 -->
+    <!-- 教師模式切換 (隱藏功能：點擊三次可開關) -->
     <div class="fixed bottom-6 right-6">
-        <button onclick="toggleTeacherMode()" id="teacher-toggle" class="bg-white p-3 rounded-full shadow-md border opacity-30 hover:opacity-100">⚙️</button>
+        <button onclick="handleTeacherClick()" id="teacher-toggle" class="bg-white p-3 rounded-full shadow-md border opacity-10 hover:opacity-50 transition-opacity">⚙️</button>
     </div>
 
     <script>
@@ -173,11 +198,32 @@
         };
 
         const UNITS = {
-            A: ['a', 'e', 'i', 'o', 'u', 'ala', 'ola', 'lila'],
-            B: ['pa', 'pe', 'pi', 'po', 'pu', 'la', 'le', 'li', 'lo', 'lu']
+            A: [
+                { word: 'a', icon: '' },
+                { word: 'e', icon: '' },
+                { word: 'i', icon: '' },
+                { word: 'o', icon: '' },
+                { word: 'u', icon: '' },
+                { word: 'ala', icon: '🪽' },
+                { word: 'ola', icon: '🌊' },
+                { word: 'lila', icon: '🟣' }
+            ],
+            B: [
+                { word: 'pa', icon: '' },
+                { word: 'pe', icon: '' },
+                { word: 'pi', icon: '' },
+                { word: 'po', icon: '' },
+                { word: 'pu', icon: '' },
+                { word: 'la', icon: '' },
+                { word: 'le', icon: '' },
+                { word: 'li', icon: '' },
+                { word: 'lo', icon: '' },
+                { word: 'lu', icon: '' }
+            ]
         };
 
         const INSTRUCTIONS = {
+            0: { icon: '📺', title: 'Mira y Aprende', desc: '' },
             1: { icon: '👂', title: 'Escucha y Elige', desc: 'Escucha el sonido y toca la palabra correcta.' },
             2: { icon: '📖', title: 'Mira y Elige', desc: 'Escucha el sonido y toca la palabra escrita correcta.' },
             3: { icon: '✍️', title: 'Escucha y Escribe', desc: 'Escucha el sonido y escribe la palabra.' }
@@ -190,14 +236,15 @@
             currentIndex: 0,
             stars: 0,
             teacherMode: false,
-            unlocked: { A: 1, B: 0 },
+            teacherClicks: 0,
+            unlocked: { A: 0, B: 0 },
             selectedOption: null,
             voices: { male: null, female: null },
             voiceToggle: true,
-            isRetrying: false,
-            clickCounts: { A: {1:0, 2:0, 3:0}, B: {1:0, 2:0, 3:0} }
+            isRetrying: false
         };
 
+        // --- 語音系統 ---
         function loadVoices() {
             const v = window.speechSynthesis.getVoices();
             const es = v.filter(voice => voice.lang.includes('es'));
@@ -208,12 +255,13 @@
         loadVoices();
 
         function speak(text, callback) {
+            if (!text) return;
             window.speechSynthesis.cancel();
             const lowerText = text.toLowerCase();
             const processedText = SYLLABLE_HINTS[lowerText] || text;
             const ut = new SpeechSynthesisUtterance(processedText);
             
-            if (lowerText === 'lu' || lowerText === 'lo') {
+            if (lowerText === 'lu' || lowerText === 'lo' || lowerText === 'ala' || lowerText === 'ola') {
                 ut.voice = state.voices.male;
             } else {
                 ut.voice = state.voiceToggle ? state.voices.female : state.voices.male;
@@ -222,32 +270,22 @@
             
             ut.lang = 'es-ES';
             ut.rate = 0.65;
-            
-            if (callback) {
-                ut.onend = () => callback();
-            }
-            
+            if (callback) ut.onend = () => callback();
             window.speechSynthesis.speak(ut);
         }
 
-        // 統一處理 A 與 B 單元點擊邏輯
+        // --- 核心導航 ---
         function handleUnitClick(unit, level) {
             const isUnlocked = state.teacherMode || (state.unlocked[unit] >= level);
             if (isUnlocked) {
                 showInstruction(unit, level);
-            } else {
-                state.clickCounts[unit][level]++;
-                if (state.clickCounts[unit][level] >= 3) {
-                    state.clickCounts[unit][level] = 0;
-                    showInstruction(unit, level);
-                }
             }
         }
 
         function showInstruction(unit, level) {
             state.currentUnit = unit;
             state.currentLevel = level;
-            document.getElementById('menu-view').classList.add('hidden');
+            document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
             document.getElementById('instruction-view').classList.remove('hidden');
             const ins = INSTRUCTIONS[level];
             document.getElementById('instruction-icon').innerText = ins.icon;
@@ -258,14 +296,60 @@
 
         function startLevelFromInstruction() {
             document.getElementById('instruction-view').classList.add('hidden');
-            startLevel(state.currentUnit, state.currentLevel);
+            if (state.currentLevel === 0) {
+                startRepaso();
+            } else {
+                startLevel(state.currentUnit, state.currentLevel);
+            }
         }
 
+        // --- Repaso 模式 (Nivel 0) ---
+        function startRepaso() {
+            state.currentIndex = 0;
+            state.questions = UNITS[state.currentUnit];
+            document.getElementById('repaso-view').classList.remove('hidden');
+            document.getElementById('game-header').classList.remove('hidden');
+            renderFlashcard();
+        }
+
+        function renderFlashcard() {
+            const item = state.questions[state.currentIndex];
+            const container = document.getElementById('flashcard-container');
+            const iconHtml = item.icon ? `<div class="text-[120px] mb-4">${item.icon}</div>` : '';
+            
+            container.innerHTML = `
+                <div class="flashcard-enter text-center space-y-6">
+                    ${iconHtml}
+                    <div class="text-7xl font-bold text-blue-600">${item.word}</div>
+                    <button onclick="speak('${item.word}')" class="w-20 h-20 bg-blue-100 rounded-full text-3xl mx-auto shadow-inner active:scale-90 transition-transform">🔊</button>
+                </div>
+            `;
+            
+            document.getElementById('progress-bar').style.width = `${((state.currentIndex + 1) / state.questions.length) * 100}%`;
+            document.getElementById('star-count').innerText = "📚";
+            
+            setTimeout(() => speak(item.word), 300);
+
+            const nextBtn = document.getElementById('next-flashcard-btn');
+            nextBtn.innerText = (state.currentIndex === state.questions.length - 1) ? "¡Terminar Repaso!" : "Siguiente";
+        }
+
+        function nextFlashcard() {
+            if (state.currentIndex < state.questions.length - 1) {
+                state.currentIndex++;
+                renderFlashcard();
+            } else {
+                state.unlocked[state.currentUnit] = Math.max(state.unlocked[state.currentUnit], 1);
+                showCompletion();
+            }
+        }
+
+        // --- 挑戰模式邏輯 ---
         function startLevel(unit, level) {
             state.currentIndex = 0;
             state.stars = 0;
             state.isRetrying = false;
-            const pool = UNITS[unit];
+            const pool = UNITS[unit].map(u => u.word);
             state.questions = [];
             for(let i=0; i<10; i++) {
                 const target = pool[Math.floor(Math.random() * pool.length)];
@@ -278,47 +362,6 @@
             renderQuestion();
         }
 
-        function goBack() {
-            window.speechSynthesis.cancel();
-            document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
-            document.getElementById('game-header').classList.add('hidden');
-            document.getElementById('menu-view').classList.remove('hidden');
-            updateMenuUI();
-        }
-
-        function goToNextLevel() {
-            let nextUnit = state.currentUnit;
-            let nextLevel = state.currentLevel + 1;
-            if (nextLevel > 3) {
-                if (state.currentUnit === 'A') {
-                    nextUnit = 'B';
-                    nextLevel = 1;
-                } else {
-                    goBack();
-                    return;
-                }
-            }
-            showInstruction(nextUnit, nextLevel);
-            document.getElementById('complete-view').classList.add('hidden');
-        }
-
-        function updateMenuUI() {
-            ['A', 'B'].forEach(u => {
-                for(let l=1; l<=3; l++) {
-                    const btn = document.getElementById(`btn-${u}-${l}`);
-                    if (!btn) continue;
-                    const isUnlocked = state.teacherMode || (state.unlocked[u] >= l);
-                    if (isUnlocked) {
-                        btn.disabled = false;
-                        btn.className = (u === 'A' ? "p-4 rounded-2xl bg-blue-100 text-blue-700 font-bold" : "p-4 rounded-2xl bg-purple-100 text-purple-700 font-bold");
-                    } else {
-                        btn.disabled = false; // 為了讓連點三下能生效，按鍵不鎖死但外觀顯示灰色
-                        btn.className = "p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold";
-                    }
-                }
-            });
-        }
-
         function renderQuestion() {
             const q = state.questions[state.currentIndex];
             const container = document.getElementById('question-container');
@@ -328,8 +371,7 @@
             document.getElementById('progress-bar').style.width = `${(state.currentIndex / 10) * 100}%`;
             document.getElementById('star-count').innerText = state.stars;
 
-            if (state.currentLevel === 1) {
-                // 聽力關卡：點擊發音，選擇文字
+            if (state.currentLevel === 1 || state.currentLevel === 2) {
                 const soundBtn = createSoundBtn(q.target, 'w-32 h-32 bg-blue-500 text-5xl');
                 const confirmBtn = createConfirmBtn(() => handleAnswer(state.selectedOption === q.target));
                 const grid = document.createElement('div');
@@ -340,37 +382,9 @@
                     const btn = document.createElement('button');
                     btn.className = "bg-white p-8 rounded-3xl text-4xl font-bold shadow-md border-4 border-transparent transition-all";
                     btn.innerText = opt;
-                    btn.id = `opt-l1-${i}`;
+                    btn.id = `opt-l-${i}`;
                     btn.onclick = () => {
-                        document.querySelectorAll('[id^="opt-l1-"]').forEach(el => el.classList.remove('selected-option'));
-                        btn.classList.add('selected-option');
-                        state.selectedOption = opt;
-                        confirmBtn.disabled = false;
-                        confirmBtn.classList.remove('opacity-50');
-                    };
-                    grid.appendChild(btn);
-                });
-
-                container.appendChild(soundBtn);
-                container.appendChild(grid);
-                container.appendChild(confirmBtn);
-                speak(q.target);
-
-            } else if (state.currentLevel === 2) {
-                // Nivel 2 改成文字題目：聽發音，選出正確的文字選項
-                const soundBtn = createSoundBtn(q.target, 'w-32 h-32 bg-blue-500 text-5xl mb-4');
-                const confirmBtn = createConfirmBtn(() => handleAnswer(state.selectedOption === q.target));
-                const grid = document.createElement('div');
-                grid.className = "grid grid-cols-2 gap-4 w-full mb-6";
-                const options = [q.target, q.distractor].sort(() => Math.random() - 0.5);
-                
-                options.forEach((opt, i) => {
-                    const btn = document.createElement('button');
-                    btn.className = "bg-white p-8 rounded-3xl text-4xl font-bold shadow-md border-4 border-transparent transition-all";
-                    btn.innerText = opt;
-                    btn.id = `opt-l2-${i}`;
-                    btn.onclick = () => {
-                        document.querySelectorAll('[id^="opt-l2-"]').forEach(el => el.classList.remove('selected-option'));
+                        document.querySelectorAll('[id^="opt-l-"]').forEach(el => el.classList.remove('selected-option'));
                         btn.classList.add('selected-option');
                         state.selectedOption = opt;
                         confirmBtn.disabled = false;
@@ -385,71 +399,33 @@
                 speak(q.target);
 
             } else if (state.currentLevel === 3) {
-                // 寫字關卡
                 const headerRow = document.createElement('div');
                 headerRow.className = "flex items-center justify-center space-x-6 mb-4";
-
                 if (state.isRetrying) {
                     const hint = document.createElement('div');
                     hint.className = "text-6xl font-bold text-blue-500";
                     hint.innerText = q.target;
                     headerRow.appendChild(hint);
                 }
-                
                 const soundBtn = createSoundBtn(q.target, 'w-24 h-24 bg-purple-500 text-4xl');
                 headerRow.appendChild(soundBtn);
-                
                 const canvasBox = document.createElement('div');
                 canvasBox.className = "w-full aspect-[4/3] canvas-container mb-4 shadow-inner";
                 const canvas = document.createElement('canvas');
                 canvas.id = "main-canvas";
                 canvasBox.appendChild(canvas);
-                
                 const controls = document.createElement('div');
                 controls.className = "flex space-x-4 w-full";
                 const clearBtn = createUtilityBtn("Borrar", () => {});
-                const nextBtn = createUtilityBtn("Listo", () => {
-                    speak("Gracias");
-                    showComparison(canvas, q.target);
-                }, true);
-                
+                const nextBtn = createUtilityBtn("Listo", () => showComparison(canvas, q.target), true);
                 container.appendChild(headerRow);
                 container.appendChild(canvasBox);
                 controls.appendChild(clearBtn);
                 controls.appendChild(nextBtn);
                 container.appendChild(controls);
-                
                 setTimeout(() => initCanvas(canvas, clearBtn), 50);
                 speak(q.target);
             }
-        }
-
-        function showComparison(canvas, target) {
-            const levelView = document.getElementById('level-view');
-            const compareView = document.getElementById('compare-view');
-            levelView.classList.add('hidden');
-            compareView.classList.remove('hidden');
-            const preview = document.getElementById('user-draw-preview');
-            preview.innerHTML = '';
-            const img = new Image();
-            img.src = canvas.toDataURL();
-            img.className = "w-full h-full object-contain p-2";
-            preview.appendChild(img);
-            document.getElementById('correct-text-preview').innerText = target;
-        }
-
-        function retryWriting() {
-            state.isRetrying = true;
-            document.getElementById('compare-view').classList.add('hidden');
-            document.getElementById('level-view').classList.remove('hidden');
-            renderQuestion();
-        }
-
-        function proceedAfterCompare() {
-            state.isRetrying = false;
-            document.getElementById('compare-view').classList.add('hidden');
-            document.getElementById('level-view').classList.remove('hidden');
-            handleAnswer(true);
         }
 
         function createSoundBtn(val, cls) {
@@ -480,11 +456,8 @@
         function handleAnswer(isCorrect) {
             const nextAction = () => {
                 setTimeout(() => {
-                    if(state.currentIndex >= 10) {
-                        showCompletion();
-                    } else {
-                        renderQuestion();
-                    }
+                    if(state.currentIndex >= 10) showCompletion();
+                    else renderQuestion();
                 }, 600);
             };
 
@@ -498,62 +471,130 @@
                 setTimeout(() => icon.remove(), 1000);
             } else {
                 speak("Otra vez", nextAction);
-                const icon = document.createElement('div');
-                icon.className = "fixed inset-0 flex items-center justify-center text-5xl font-bold text-red-500 pointer-events-none z-50";
-                icon.innerHTML = "Otra vez";
-                document.body.appendChild(icon);
-                setTimeout(() => icon.remove(), 1000);
                 const current = state.questions[state.currentIndex];
                 state.questions.push({...current});
             }
-            
             state.currentIndex++;
         }
 
+        // --- 完成結算 ---
         function showCompletion() {
-            document.getElementById('level-view').classList.add('hidden');
+            document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
             document.getElementById('game-header').classList.add('hidden');
             document.getElementById('complete-view').classList.remove('hidden');
             
             const scoreDisplay = document.getElementById('result-score');
-            const resultTitle = document.getElementById('result-title');
             const medal = document.getElementById('result-medal');
+            const titleDisplay = document.getElementById('result-title');
             const nextBtn = document.getElementById('next-level-btn');
+            const retryBtn = document.getElementById('retry-btn');
 
-            scoreDisplay.innerText = `Puntaje: ${state.stars} / 10`;
-
-            if(state.stars >= 8) {
-                speak("¡Excelente!");
-                resultTitle.innerText = "¡Excelente! ☺️";
-                medal.innerText = "🏅";
+            if (state.currentLevel === 0) {
+                const finishMsg = "¡Has terminado el repaso!";
+                scoreDisplay.innerText = finishMsg;
+                titleDisplay.innerText = "☺️";
+                medal.innerText = "📖";
+                speak(finishMsg);
                 nextBtn.classList.remove('hidden');
-                if(state.currentLevel < 3) {
-                    state.unlocked[state.currentUnit] = Math.max(state.unlocked[state.currentUnit], state.currentLevel + 1);
-                } else if(state.currentUnit === 'A') {
-                    state.unlocked.B = Math.max(state.unlocked.B, 1);
-                }
+                retryBtn.classList.add('hidden');
             } else {
-                speak("Otra vez");
-                resultTitle.innerText = "¡Otra vez! ☺️";
-                medal.innerText = "💪";
-                nextBtn.classList.add('hidden');
+                scoreDisplay.innerText = `Puntaje: ${state.stars} / 10`;
+                
+                if(state.stars >= 6) {
+                    const excelentMsg = "¡Excelente!";
+                    titleDisplay.innerText = `${excelentMsg} ☺️`;
+                    medal.innerText = "🏅";
+                    speak(excelentMsg);
+                    nextBtn.classList.remove('hidden');
+                    retryBtn.classList.add('hidden');
+
+                    if(state.stars >= 8) {
+                        if(state.currentLevel < 3) {
+                            state.unlocked[state.currentUnit] = Math.max(state.unlocked[state.currentUnit], state.currentLevel + 1);
+                        } else if(state.currentUnit === 'A') {
+                            state.unlocked.B = Math.max(state.unlocked.B, 0); 
+                        }
+                    }
+                } else {
+                    const retryMsg = "Otra vez";
+                    titleDisplay.innerText = `¡${retryMsg}! 💪`;
+                    medal.innerText = "💪";
+                    speak(retryMsg);
+                    nextBtn.classList.add('hidden');
+                    retryBtn.classList.remove('hidden');
+                }
             }
+            updateMenuUI();
         }
 
-        function toggleTeacherMode() {
-            state.teacherMode = !state.teacherMode;
+        function retryLevel() {
+            startLevel(state.currentUnit, state.currentLevel);
+        }
+
+        function goBack() {
+            window.speechSynthesis.cancel();
+            document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
+            document.getElementById('game-header').classList.add('hidden');
+            document.getElementById('menu-view').classList.remove('hidden');
             updateMenuUI();
-            document.getElementById('teacher-toggle').classList.toggle('opacity-100', state.teacherMode);
+        }
+
+        function goToNextLevel() {
+            let nextLevel = state.currentLevel + 1;
+            if (nextLevel > 3) goBack();
+            else showInstruction(state.currentUnit, nextLevel);
+        }
+
+        // --- UI 更新與工具 ---
+        function updateMenuUI() {
+            ['A', 'B'].forEach(u => {
+                for(let l=0; l<=3; l++) {
+                    const btn = document.getElementById(`btn-${u}-${l}`);
+                    if (!btn) continue;
+                    const isUnlocked = state.teacherMode || (state.unlocked[u] >= l);
+                    if (isUnlocked) {
+                        btn.disabled = false;
+                        if (l === 0) btn.className = "p-4 rounded-2xl bg-orange-100 text-orange-700 font-bold";
+                        else btn.className = (u === 'A' ? "p-4 rounded-2xl bg-blue-100 text-blue-700 font-bold" : "p-4 rounded-2xl bg-purple-100 text-purple-700 font-bold");
+                    } else {
+                        btn.className = "p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold";
+                        btn.disabled = true;
+                    }
+                }
+            });
+        }
+
+        function showComparison(canvas, target) {
+            document.getElementById('level-view').classList.add('hidden');
+            document.getElementById('compare-view').classList.remove('hidden');
+            const preview = document.getElementById('user-draw-preview');
+            preview.innerHTML = '';
+            const img = new Image();
+            img.src = canvas.toDataURL();
+            img.className = "w-full h-full object-contain p-2";
+            preview.appendChild(img);
+            document.getElementById('correct-text-preview').innerText = target;
+        }
+
+        function retryWriting() {
+            state.isRetrying = true;
+            document.getElementById('compare-view').classList.add('hidden');
+            document.getElementById('level-view').classList.remove('hidden');
+            renderQuestion();
+        }
+
+        function proceedAfterCompare() {
+            state.isRetrying = false;
+            document.getElementById('compare-view').classList.add('hidden');
+            document.getElementById('level-view').classList.remove('hidden');
+            handleAnswer(true);
         }
 
         function initCanvas(canvas, clearBtn) {
             const ctx = canvas.getContext('2d');
-            const parent = canvas.parentElement;
-            canvas.width = parent.offsetWidth;
-            canvas.height = parent.offsetHeight;
-            ctx.lineWidth = 10;
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = '#1e293b';
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+            ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.strokeStyle = '#1e293b';
             let drawing = false;
             function getPos(e) {
                 const b = canvas.getBoundingClientRect();
@@ -561,12 +602,24 @@
                 const y = (e.touches ? e.touches[0].clientY : e.clientY) - b.top;
                 return {x, y};
             }
-            function start(e) { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
-            function move(e) { if(!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }
-            function stop() { drawing = false; }
-            canvas.onmousedown = start; canvas.onmousemove = move; window.onmouseup = stop;
-            canvas.ontouchstart = start; canvas.ontouchmove = move; window.ontouchend = stop;
+            canvas.onmousedown = (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+            canvas.onmousemove = (e) => { if(!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+            window.onmouseup = () => drawing = false;
+            canvas.ontouchstart = (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+            canvas.ontouchmove = (e) => { if(!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+            canvas.ontouchend = () => drawing = false;
             clearBtn.onclick = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // --- 隱藏功能：老師模式 (點三下開關) ---
+        function handleTeacherClick() {
+            state.teacherClicks++;
+            if (state.teacherClicks >= 3) {
+                state.teacherMode = !state.teacherMode;
+                state.teacherClicks = 0;
+                updateMenuUI();
+                document.getElementById('teacher-toggle').classList.toggle('opacity-50', state.teacherMode);
+            }
         }
 
         updateMenuUI();
