@@ -186,14 +186,14 @@
     </div>
 
     <script>
+        // 定義發音輔助字典
         const SYLLABLE_HINTS = {
             'lila': 'li la',
             'ala': 'a la',
             'ola': 'o la',
-            'lulo': 'lu lo',
             'pala': 'pa la',
             'pelo': 'pe lo',
-            'lo': 'low',
+            // 'lo' 移除發音提示，改為系統直唸
             'lu': 'loo'
         };
 
@@ -211,7 +211,7 @@
             B: [
                 { word: 'pa', icon: '' }, { word: 'pe', icon: '' }, { word: 'pi', icon: '' }, { word: 'po', icon: '' }, { word: 'pu', icon: '' },
                 { word: 'la', icon: '' }, { word: 'le', icon: '' }, { word: 'li', icon: '' }, { word: 'lo', icon: '' }, { word: 'lu', icon: '' },
-                { word: 'pala', icon: '🧹' }, { word: 'pelo', icon: '💇' }, { word: 'lulo', icon: '🍈' }
+                { word: 'pala', icon: '🪏' }, { word: 'pelo', icon: '💇‍♂️' }
             ]
         };
 
@@ -240,6 +240,7 @@
         function loadVoices() {
             const v = window.speechSynthesis.getVoices();
             const es = v.filter(voice => voice.lang.includes('es'));
+            // 優先選擇常見的語音名稱
             state.voices.female = es.find(voice => voice.name.includes('Monica') || voice.name.includes('Paulina') || voice.name.includes('Google') || voice.name.includes('Helena')) || es[0];
             state.voices.male = es.find(voice => voice.name.includes('Jorge') || (voice.name.includes('Google') && !voice.name.includes('female'))) || es[es.length - 1];
         }
@@ -253,7 +254,7 @@
             const processedText = SYLLABLE_HINTS[lowerText] || text;
             const ut = new SpeechSynthesisUtterance(processedText);
             
-            // 強制 ala 和 ola 使用男性聲音
+            // 強制特定單字使用男性聲音
             if (lowerText === 'lu' || lowerText === 'lo' || lowerText === 'ala' || lowerText === 'ola') {
                 ut.voice = state.voices.male;
             } else {
