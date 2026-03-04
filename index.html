@@ -66,10 +66,16 @@
     <header id="game-header" class="hidden p-4 bg-white shadow-sm border-b">
         <div class="flex justify-between items-center mb-3">
             <button onclick="goBack()" class="text-blue-500 font-bold flex items-center">
-                <span>←</span> <span class="ml-1">Salir</span>
+                <span>←</span> <span class="ml-1 text-sm md:text-base">Salir</span>
             </button>
-            <div id="stars-display" class="flex items-center text-yellow-500 font-bold text-2xl">
-                ⭐ <span id="star-count" class="ml-1">0</span>
+            <div class="flex items-center space-x-4">
+                <!-- 碼表顯示區 -->
+                <div id="timer-display" class="flex items-center text-blue-600 font-mono font-bold text-xl bg-blue-50 px-3 py-1 rounded-full">
+                    ⏱️ <span id="time-count" class="ml-1">0</span>s
+                </div>
+                <div id="stars-display" class="flex items-center text-yellow-500 font-bold text-2xl">
+                    ⭐ <span id="star-count" class="ml-1">0</span>
+                </div>
             </div>
         </div>
         <div class="w-full bg-gray-100 rounded-full h-3">
@@ -166,11 +172,14 @@
         </div>
 
         <!-- 完成畫面 -->
-        <div id="complete-view" class="hidden text-center space-y-8">
+        <div id="complete-view" class="hidden text-center space-y-6">
             <div id="result-medal" class="bg-yellow-400 w-32 h-32 rounded-full flex items-center justify-center text-6xl shadow-xl mx-auto mb-4 star-animation">🏅</div>
             <div>
-                <h2 id="result-title" class="text-4xl font-bold text-gray-800 mb-2">¡Excelente! ☺️</h2>
-                <p id="result-score" class="text-xl text-gray-600 font-bold mb-4"></p>
+                <h2 id="result-title" class="text-4xl font-bold text-gray-800 mb-1">¡Excelente! ☺️</h2>
+                <div class="flex flex-col items-center justify-center space-y-1">
+                    <p id="result-score" class="text-xl text-gray-600 font-bold"></p>
+                    <p id="result-time" class="text-lg text-blue-600 font-bold bg-blue-50 px-4 py-1 rounded-full border border-blue-100"></p>
+                </div>
             </div>
             <div id="complete-actions" class="flex flex-col space-y-3 w-64 mx-auto">
                 <button id="next-level-btn" onclick="goToNextLevel()" class="px-8 py-4 bg-blue-600 text-white rounded-full font-bold text-xl shadow-lg">Siguiente Nivel</button>
@@ -190,10 +199,9 @@
         const SYLLABLE_HINTS = {
             'lila': 'lí la',
             'ala': 'á la',
-            'ola': 'ó la',
+            'ola': 'o la',
             'pala': 'pá la',
             'pelo': 'pé lo',
-            // 'lo' 移除發音提示，改為系統直唸
             'lu': 'lú'
         };
 
@@ -234,13 +242,35 @@
             selectedOption: null,
             voices: { male: null, female: null },
             voiceToggle: true,
-            isRetrying: false
+            isRetrying: false,
+            // 碼表相關
+            timer: null,
+            seconds: 0
         };
+
+        function startTimer() {
+            stopTimer();
+            state.seconds = 0;
+            updateTimerUI();
+            state.timer = setInterval(() => {
+                state.seconds++;
+                updateTimerUI();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (state.timer) clearInterval(state.timer);
+            state.timer = null;
+        }
+
+        function updateTimerUI() {
+            const timerEl = document.getElementById('time-count');
+            if (timerEl) timerEl.innerText = state.seconds;
+        }
 
         function loadVoices() {
             const v = window.speechSynthesis.getVoices();
             const es = v.filter(voice => voice.lang.includes('es'));
-            // 優先選擇常見的語音名稱
             state.voices.female = es.find(voice => voice.name.includes('Monica') || voice.name.includes('Paulina') || voice.name.includes('Google') || voice.name.includes('Helena')) || es[0];
             state.voices.male = es.find(voice => voice.name.includes('Jorge') || (voice.name.includes('Google') && !voice.name.includes('female'))) || es[es.length - 1];
         }
@@ -254,7 +284,6 @@
             const processedText = SYLLABLE_HINTS[lowerText] || text;
             const ut = new SpeechSynthesisUtterance(processedText);
             
-            // 強制特定單字使用男性聲音
             if (lowerText === 'lu' || lowerText === 'lo' || lowerText === 'ala' || lowerText === 'ola') {
                 ut.voice = state.voices.male;
             } else {
@@ -307,6 +336,7 @@
             state.questions = UNITS[state.currentUnit];
             document.getElementById('repaso-view').classList.remove('hidden');
             document.getElementById('game-header').classList.remove('hidden');
+            startTimer(); // 開始計時
             renderFlashcard();
         }
 
@@ -336,6 +366,7 @@
                 state.currentIndex++;
                 renderFlashcard();
             } else {
+                stopTimer(); // 停止計時
                 state.unlocked[state.currentUnit] = Math.max(state.unlocked[state.currentUnit], 1);
                 showCompletion();
             }
@@ -355,6 +386,7 @@
             }
             document.getElementById('level-view').classList.remove('hidden');
             document.getElementById('game-header').classList.remove('hidden');
+            startTimer(); // 開始計時
             renderQuestion();
         }
 
@@ -451,7 +483,10 @@
         function handleAnswer(isCorrect) {
             const nextAction = () => {
                 setTimeout(() => {
-                    if(state.currentIndex >= 10) showCompletion();
+                    if(state.currentIndex >= 10) {
+                        stopTimer(); // 停止計時
+                        showCompletion();
+                    }
                     else renderQuestion();
                 }, 600);
             };
@@ -479,10 +514,14 @@
             document.getElementById('complete-view').classList.remove('hidden');
             
             const scoreDisplay = document.getElementById('result-score');
+            const timeDisplay = document.getElementById('result-time'); // 顯示時間的元素
             const medal = document.getElementById('result-medal');
             const titleDisplay = document.getElementById('result-title');
             const nextBtn = document.getElementById('next-level-btn');
             const retryBtn = document.getElementById('retry-btn');
+
+            // 顯示完成時間
+            timeDisplay.innerText = `⏱️ Tiempo: ${state.seconds}s`;
 
             if (state.currentLevel === 0) {
                 const finishMsg = "¡Has terminado el repaso!";
@@ -517,6 +556,7 @@
 
         function retryLevel() { startLevel(state.currentUnit, state.currentLevel); }
         function goBack() {
+            stopTimer(); // 返回選單時停止計時
             window.speechSynthesis.cancel();
             document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
             document.getElementById('game-header').classList.add('hidden');
