@@ -24,6 +24,22 @@
             width: 100%;
         }
 
+        /* 描寫底字樣式 */
+        .tracing-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8rem;
+            font-weight: bold;
+            color: #f1f5f9; /* 極淺灰色 */
+            pointer-events: none;
+            user-select: none;
+            z-index: 0;
+            white-space: nowrap;
+        }
+
         .star-animation {
             animation: pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
@@ -69,7 +85,6 @@
                 <span>←</span> <span class="ml-1 text-sm md:text-base">Salir</span>
             </button>
             <div class="flex items-center space-x-4">
-                <!-- 碼表顯示區 -->
                 <div id="timer-display" class="flex items-center text-blue-600 font-mono font-bold text-xl bg-blue-50 px-3 py-1 rounded-full">
                     ⏱️ <span id="time-count" class="ml-1">0</span>s
                 </div>
@@ -94,7 +109,6 @@
             </div>
 
             <div class="space-y-6">
-                <!-- Unidad A -->
                 <div class="bg-white p-6 rounded-3xl shadow-md border-b-8 border-blue-200">
                     <h2 class="text-2xl font-bold text-blue-800 mb-4">Unidad A: a e i o u</h2>
                     <div class="grid grid-cols-2 gap-3">
@@ -105,7 +119,6 @@
                     </div>
                 </div>
 
-                <!-- Unidad B -->
                 <div class="bg-white p-6 rounded-3xl shadow-md border-b-8 border-purple-200">
                     <h2 class="text-2xl font-bold text-purple-800 mb-4">Unidad B: p / l</h2>
                     <div class="grid grid-cols-2 gap-3">
@@ -137,12 +150,15 @@
         </div>
 
         <!-- 複習模式畫面 (Nivel 0) -->
-        <div id="repaso-view" class="hidden w-full max-w-md flex flex-col items-center h-full space-y-8">
-            <div id="flashcard-container" class="flex-grow flex flex-col items-center justify-center w-full">
+        <div id="repaso-view" class="hidden w-full max-w-md flex flex-col items-center h-full space-y-4">
+            <div id="flashcard-container" class="flex-grow flex flex-col items-center justify-center w-full space-y-4">
                 <!-- 動態注入內容 -->
             </div>
-            <div class="w-full pb-10">
-                <button onclick="nextFlashcard()" id="next-flashcard-btn" class="w-full py-5 bg-orange-500 text-white rounded-full font-bold text-2xl shadow-lg">
+            <div class="w-full grid grid-cols-2 gap-3 pb-8">
+                <button onclick="clearRepasoCanvas()" class="py-4 bg-gray-200 text-gray-700 rounded-full font-bold text-xl">
+                    Borrar
+                </button>
+                <button onclick="nextFlashcard()" id="next-flashcard-btn" class="py-4 bg-orange-500 text-white rounded-full font-bold text-xl shadow-lg">
                     Siguiente
                 </button>
             </div>
@@ -195,36 +211,24 @@
     </div>
 
     <script>
-        // 定義發音輔助字典
         const SYLLABLE_HINTS = {
-            'lila': 'lí la',
-            'ala': 'á la',
-            'ola': 'o la',
-            'pala': 'pá la',
-            'pelo': 'pé lo',
-            'lu': 'lú'
+            'lila': 'lí la', 'ala': 'á la', 'ola': 'o la', 'pala': 'pá la', 'pelo': 'pé lo', 'lu': 'lú', 'pila': 'pí la', 'pipa': 'pí pa'
         };
 
         const UNITS = {
             A: [
-                { word: 'a', icon: '' },
-                { word: 'e', icon: '' },
-                { word: 'i', icon: '' },
-                { word: 'o', icon: '' },
-                { word: 'u', icon: '' },
-                { word: 'ala', icon: '🪽' },
-                { word: 'ola', icon: '🌊' },
-                { word: 'lila', icon: '🟣' }
+                { word: 'a', icon: '' }, { word: 'e', icon: '' }, { word: 'i', icon: '' }, { word: 'o', icon: '' }, { word: 'u', icon: '' },
+                { word: 'ala', icon: '🪽' }, { word: 'ola', icon: '🌊' }, { word: 'lila', icon: '🟣' }
             ],
             B: [
                 { word: 'pa', icon: '' }, { word: 'pe', icon: '' }, { word: 'pi', icon: '' }, { word: 'po', icon: '' }, { word: 'pu', icon: '' },
                 { word: 'la', icon: '' }, { word: 'le', icon: '' }, { word: 'li', icon: '' }, { word: 'lo', icon: '' }, { word: 'lu', icon: '' },
-                { word: 'pala', icon: '🪏' }, { word: 'pelo', icon: '💇‍♂️' }
+                { word: 'pala', icon: '🪏' }, { word: 'pelo', icon: '💇‍♂️' }, { word: 'pila', icon: '' }, { word: 'pipa', icon: '' }
             ]
         };
 
         const INSTRUCTIONS = {
-            0: { icon: '📺', title: 'Mira y Aprende', desc: '' },
+            0: { icon: '✍️', title: 'Mira y Traza', desc: '¡Vamos a dibujar las letras!' },
             1: { icon: '👂', title: 'Escucha y Elige', desc: '' },
             2: { icon: '📖', title: 'Mira y Elige', desc: '' },
             3: { icon: '✍️', title: 'Escucha y Escribe', desc: '' }
@@ -242,26 +246,18 @@
             selectedOption: null,
             voices: { male: null, female: null },
             voiceToggle: true,
-            isRetrying: false,
-            // 碼表相關
+            isRetrying: false, // 用於 Nivel 3 是否啟動描寫引導
             timer: null,
-            seconds: 0
+            seconds: 0,
+            repasoCanvasCtx: null
         };
 
         function startTimer() {
-            stopTimer();
-            state.seconds = 0;
-            updateTimerUI();
-            state.timer = setInterval(() => {
-                state.seconds++;
-                updateTimerUI();
-            }, 1000);
+            stopTimer(); state.seconds = 0; updateTimerUI();
+            state.timer = setInterval(() => { state.seconds++; updateTimerUI(); }, 1000);
         }
 
-        function stopTimer() {
-            if (state.timer) clearInterval(state.timer);
-            state.timer = null;
-        }
+        function stopTimer() { if (state.timer) clearInterval(state.timer); state.timer = null; }
 
         function updateTimerUI() {
             const timerEl = document.getElementById('time-count');
@@ -283,45 +279,33 @@
             const lowerText = text.toLowerCase();
             const processedText = SYLLABLE_HINTS[lowerText] || text;
             const ut = new SpeechSynthesisUtterance(processedText);
-            
-            if (lowerText === 'lu' || lowerText === 'lo' || lowerText === 'ala' || lowerText === 'ola') {
+            if (['lu', 'lo', 'ala', 'ola', 'pila', 'pipa'].includes(lowerText)) {
                 ut.voice = state.voices.male;
             } else {
                 ut.voice = state.voiceToggle ? state.voices.female : state.voices.male;
                 state.voiceToggle = !state.voiceToggle;
             }
-            
-            ut.lang = 'es-ES';
-            ut.rate = 0.65;
+            ut.lang = 'es-ES'; ut.rate = 0.65;
             if (callback) ut.onend = () => callback();
             window.speechSynthesis.speak(ut);
         }
 
         function handleUnitClick(unit, level) {
             const isUnlocked = state.teacherMode || (state.unlocked[unit] >= level);
-            if (isUnlocked) {
-                showInstruction(unit, level);
-            }
+            if (isUnlocked) showInstruction(unit, level);
         }
 
         function showInstruction(unit, level) {
-            state.currentUnit = unit;
-            state.currentLevel = level;
+            state.currentUnit = unit; state.currentLevel = level;
             document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
             const view = document.getElementById('instruction-view');
             view.classList.remove('hidden');
             const ins = INSTRUCTIONS[level];
             document.getElementById('instruction-icon').innerText = ins.icon;
             document.getElementById('instruction-title').innerText = ins.title;
-            
             const descEl = document.getElementById('instruction-desc');
-            if (ins.desc) {
-                descEl.innerText = ins.desc;
-                descEl.classList.remove('hidden');
-            } else {
-                descEl.classList.add('hidden');
-            }
-            
+            if (ins.desc) { descEl.innerText = ins.desc; descEl.classList.remove('hidden'); } 
+            else { descEl.classList.add('hidden'); }
             speak(ins.title);
         }
 
@@ -336,29 +320,47 @@
             state.questions = UNITS[state.currentUnit];
             document.getElementById('repaso-view').classList.remove('hidden');
             document.getElementById('game-header').classList.remove('hidden');
-            startTimer(); // 開始計時
+            startTimer();
             renderFlashcard();
         }
 
         function renderFlashcard() {
             const item = state.questions[state.currentIndex];
             const container = document.getElementById('flashcard-container');
-            const iconHtml = item.icon ? `<div class="text-[120px] mb-4">${item.icon}</div>` : '';
             
             container.innerHTML = `
-                <div class="flashcard-enter text-center space-y-6">
-                    ${iconHtml}
-                    <div class="text-7xl font-bold text-blue-600">${item.word}</div>
-                    <button onclick="speak('${item.word}')" class="w-20 h-20 bg-blue-100 rounded-full text-3xl mx-auto shadow-inner active:scale-90 transition-transform">🔊</button>
+                <div class="flashcard-enter text-center w-full flex flex-col items-center">
+                    <div class="flex items-center space-x-6 mb-2">
+                        <div class="text-6xl">${item.icon}</div>
+                        <button onclick="speak('${item.word}')" class="w-16 h-16 bg-blue-100 rounded-full text-2xl shadow-inner active:scale-90 transition-transform">🔊</button>
+                    </div>
+                    <p class="text-sm font-bold text-gray-400 mb-2 uppercase">Traza la palabra:</p>
+                    <div class="w-full aspect-[4/3] canvas-container shadow-inner">
+                        <div class="tracing-overlay">${item.word}</div>
+                        <canvas id="repaso-canvas" class="relative z-10"></canvas>
+                    </div>
                 </div>
             `;
             
             document.getElementById('progress-bar').style.width = `${((state.currentIndex + 1) / state.questions.length) * 100}%`;
             document.getElementById('star-count').innerText = "📚";
-            setTimeout(() => speak(item.word), 300);
+            
+            const canvas = document.getElementById('repaso-canvas');
+            setTimeout(() => {
+                initCanvas(canvas);
+                state.repasoCanvasCtx = canvas.getContext('2d');
+                speak(item.word);
+            }, 100);
 
             const nextBtn = document.getElementById('next-flashcard-btn');
-            nextBtn.innerText = (state.currentIndex === state.questions.length - 1) ? "¡Terminar Repaso!" : "Siguiente";
+            nextBtn.innerText = (state.currentIndex === state.questions.length - 1) ? "¡Terminar!" : "Siguiente";
+        }
+
+        function clearRepasoCanvas() {
+            if (state.repasoCanvasCtx) {
+                const canvas = state.repasoCanvasCtx.canvas;
+                state.repasoCanvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+            }
         }
 
         function nextFlashcard() {
@@ -366,16 +368,14 @@
                 state.currentIndex++;
                 renderFlashcard();
             } else {
-                stopTimer(); // 停止計時
+                stopTimer();
                 state.unlocked[state.currentUnit] = Math.max(state.unlocked[state.currentUnit], 1);
                 showCompletion();
             }
         }
 
         function startLevel(unit, level) {
-            state.currentIndex = 0;
-            state.stars = 0;
-            state.isRetrying = false;
+            state.currentIndex = 0; state.stars = 0; state.isRetrying = false;
             const pool = UNITS[unit].map(u => u.word);
             state.questions = [];
             for(let i=0; i<10; i++) {
@@ -386,7 +386,7 @@
             }
             document.getElementById('level-view').classList.remove('hidden');
             document.getElementById('game-header').classList.remove('hidden');
-            startTimer(); // 開始計時
+            startTimer();
             renderQuestion();
         }
 
@@ -395,61 +395,59 @@
             const container = document.getElementById('question-container');
             container.innerHTML = '';
             state.selectedOption = null;
-
             document.getElementById('progress-bar').style.width = `${(state.currentIndex / 10) * 100}%`;
             document.getElementById('star-count').innerText = state.stars;
 
             if (state.currentLevel === 1 || state.currentLevel === 2) {
                 const soundBtn = createSoundBtn(q.target, 'w-32 h-32 bg-blue-500 text-5xl');
-                const confirmBtn = createConfirmBtn(() => handleAnswer(state.selectedOption === q.target));
+                const confirmBtn = createConfirmBtn(() => {
+                    const isCorrect = state.selectedOption === q.target;
+                    handleAnswer(isCorrect);
+                });
                 const grid = document.createElement('div');
                 grid.className = "grid grid-cols-2 gap-4 w-full mb-6";
                 const options = [q.target, q.distractor].sort(() => Math.random() - 0.5);
-                
                 options.forEach((opt, i) => {
                     const btn = document.createElement('button');
                     btn.className = "bg-white p-8 rounded-3xl text-4xl font-bold shadow-md border-4 border-transparent transition-all";
-                    btn.innerText = opt;
-                    btn.id = `opt-l-${i}`;
+                    btn.innerText = opt; btn.id = `opt-l-${i}`;
                     btn.onclick = () => {
                         document.querySelectorAll('[id^="opt-l-"]').forEach(el => el.classList.remove('selected-option'));
                         btn.classList.add('selected-option');
-                        state.selectedOption = opt;
-                        confirmBtn.disabled = false;
-                        confirmBtn.classList.remove('opacity-50');
+                        state.selectedOption = opt; confirmBtn.disabled = false; confirmBtn.classList.remove('opacity-50');
                     };
                     grid.appendChild(btn);
                 });
-                container.appendChild(soundBtn);
-                container.appendChild(grid);
-                container.appendChild(confirmBtn);
+                container.appendChild(soundBtn); container.appendChild(grid); container.appendChild(confirmBtn);
                 speak(q.target);
-
             } else if (state.currentLevel === 3) {
                 const headerRow = document.createElement('div');
                 headerRow.className = "flex items-center justify-center space-x-6 mb-4";
-                if (state.isRetrying) {
-                    const hint = document.createElement('div');
-                    hint.className = "text-6xl font-bold text-blue-500";
-                    hint.innerText = q.target;
-                    headerRow.appendChild(hint);
-                }
                 const soundBtn = createSoundBtn(q.target, 'w-24 h-24 bg-purple-500 text-4xl');
                 headerRow.appendChild(soundBtn);
+                
                 const canvasBox = document.createElement('div');
                 canvasBox.className = "w-full aspect-[4/3] canvas-container mb-4 shadow-inner";
-                const canvas = document.createElement('canvas');
-                canvas.id = "main-canvas";
+                
+                // Nivel 3 的描寫邏輯：如果是在重試狀態，顯示底色字
+                if (state.isRetrying) {
+                    const overlay = document.createElement('div');
+                    overlay.className = "tracing-overlay";
+                    overlay.innerText = q.target;
+                    canvasBox.appendChild(overlay);
+                }
+
+                const canvas = document.createElement('canvas'); canvas.id = "main-canvas";
                 canvasBox.appendChild(canvas);
+                
                 const controls = document.createElement('div');
                 controls.className = "flex space-x-4 w-full";
                 const clearBtn = createUtilityBtn("Borrar", () => {});
                 const nextBtn = createUtilityBtn("Listo", () => showComparison(canvas, q.target), true);
-                container.appendChild(headerRow);
-                container.appendChild(canvasBox);
-                controls.appendChild(clearBtn);
-                controls.appendChild(nextBtn);
+                container.appendChild(headerRow); container.appendChild(canvasBox);
+                controls.appendChild(clearBtn); controls.appendChild(nextBtn);
                 container.appendChild(controls);
+                
                 setTimeout(() => initCanvas(canvas, clearBtn), 50);
                 speak(q.target);
             }
@@ -458,97 +456,95 @@
         function createSoundBtn(val, cls) {
             const btn = document.createElement('button');
             btn.className = `${cls} rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform`;
-            btn.innerHTML = "🔊";
-            btn.onclick = () => speak(val);
+            btn.innerHTML = "🔊"; btn.onclick = () => speak(val);
             return btn;
         }
 
         function createConfirmBtn(fn) {
             const btn = document.createElement('button');
             btn.className = "w-full py-5 bg-green-500 text-white rounded-full font-bold text-2xl shadow-lg opacity-50";
-            btn.innerText = "Confirmar";
-            btn.disabled = true;
-            btn.onclick = fn;
+            btn.innerText = "Confirmar"; btn.disabled = true; btn.onclick = fn;
             return btn;
         }
 
         function createUtilityBtn(txt, fn, primary=false) {
             const btn = document.createElement('button');
             btn.className = `flex-1 py-5 rounded-2xl font-bold text-xl ${primary ? 'bg-blue-600 text-white shadow-lg' : 'bg-gray-200 text-gray-700'}`;
-            btn.innerText = txt;
-            btn.onclick = fn;
+            btn.innerText = txt; btn.onclick = fn;
             return btn;
         }
 
         function handleAnswer(isCorrect) {
-            const nextAction = () => {
-                setTimeout(() => {
-                    if(state.currentIndex >= 10) {
-                        stopTimer(); // 停止計時
-                        showCompletion();
-                    }
-                    else renderQuestion();
-                }, 600);
-            };
             if(isCorrect) {
                 state.stars++;
                 const encouragements = ["Muy bien", "Excelente", "Genial", "Bien hecho"];
-                const randomEncouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
-                speak(randomEncouragement, nextAction);
+                const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
+                
                 const icon = document.createElement('div');
                 icon.className = "fixed inset-0 flex flex-col items-center justify-center pointer-events-none z-50";
-                icon.innerHTML = `<div class="text-9xl mb-4 star-animation">☺️</div><div class="bg-white/80 px-6 py-2 rounded-full text-4xl font-bold text-blue-600 shadow-xl star-animation">${randomEncouragement}</div>`;
+                icon.innerHTML = `<div class="text-9xl mb-4 star-animation">☺️</div><div class="bg-white/80 px-6 py-2 rounded-full text-4xl font-bold text-blue-600 shadow-xl star-animation">${msg}</div>`;
                 document.body.appendChild(icon);
-                setTimeout(() => icon.remove(), 1000);
+                
+                speak(msg, () => {
+                    setTimeout(() => {
+                        icon.remove();
+                        state.currentIndex++;
+                        if(state.currentIndex >= 10) { stopTimer(); showCompletion(); }
+                        else renderQuestion();
+                    }, 500);
+                });
             } else {
-                speak("Otra vez", nextAction);
-                const current = state.questions[state.currentIndex];
-                state.questions.push({...current});
+                // Nivel 1 & 2 答錯：播放 otra vez，但不跳題，原地重答
+                speak("Otra vez", () => {
+                    // 答錯視覺反饋（選單震動效果）
+                    const activeOptions = document.querySelectorAll('[id^="opt-l-"]');
+                    activeOptions.forEach(opt => {
+                        if (opt.classList.contains('selected-option')) {
+                            opt.classList.remove('selected-option');
+                            opt.classList.add('border-red-500', 'bg-red-50');
+                            setTimeout(() => opt.classList.remove('border-red-500', 'bg-red-50'), 1000);
+                        }
+                    });
+                    // 重置確認按鈕狀態讓孩子重選
+                    const confirmBtn = document.querySelector('button.bg-green-500');
+                    if (confirmBtn) {
+                        confirmBtn.disabled = true;
+                        confirmBtn.classList.add('opacity-50');
+                    }
+                    state.selectedOption = null;
+                });
             }
-            state.currentIndex++;
         }
 
         function showCompletion() {
             document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
             document.getElementById('game-header').classList.add('hidden');
             document.getElementById('complete-view').classList.remove('hidden');
-            
             const scoreDisplay = document.getElementById('result-score');
-            const timeDisplay = document.getElementById('result-time'); // 顯示時間的元素
+            const timeDisplay = document.getElementById('result-time');
             const medal = document.getElementById('result-medal');
             const titleDisplay = document.getElementById('result-title');
             const nextBtn = document.getElementById('next-level-btn');
             const retryBtn = document.getElementById('retry-btn');
 
-            // 顯示完成時間
             timeDisplay.innerText = `⏱️ Tiempo: ${state.seconds}s`;
 
             if (state.currentLevel === 0) {
                 const finishMsg = "¡Has terminado el repaso!";
-                scoreDisplay.innerText = finishMsg;
-                medal.innerText = "📖";
-                speak(finishMsg);
-                nextBtn.classList.remove('hidden');
-                retryBtn.classList.add('hidden');
+                scoreDisplay.innerText = finishMsg; medal.innerText = "📖";
+                speak(finishMsg); nextBtn.classList.remove('hidden'); retryBtn.classList.add('hidden');
             } else {
                 scoreDisplay.innerText = `Puntaje: ${state.stars} / 10`;
                 if(state.stars >= 6) {
-                    titleDisplay.innerText = "¡Excelente! ☺️";
-                    medal.innerText = "🏅";
-                    speak("Excelente");
-                    nextBtn.classList.remove('hidden');
-                    retryBtn.classList.add('hidden');
+                    titleDisplay.innerText = "¡Excelente! ☺️"; medal.innerText = "🏅"; speak("Excelente");
+                    nextBtn.classList.remove('hidden'); retryBtn.classList.add('hidden');
                     if(state.stars >= 8) {
-                        const maxL = 3;
-                        if(state.currentLevel < maxL) state.unlocked[state.currentUnit] = Math.max(state.unlocked[state.currentUnit], state.currentLevel + 1);
+                        if(state.currentLevel < 3) state.unlocked[state.currentUnit] = Math.max(state.unlocked[state.currentUnit], state.currentLevel + 1);
                         else if(state.currentUnit === 'A') state.unlocked.B = Math.max(state.unlocked.B, 0); 
                     }
                 } else {
-                    titleDisplay.innerText = "¡Otra vez! 💪";
-                    medal.innerText = "💪";
-                    speak("Otra vez");
-                    nextBtn.classList.add('hidden');
-                    retryBtn.classList.remove('hidden');
+                    titleDisplay.innerText = "¡Otra vez! 💪"; medal.innerText = "💪"; speak("Otra vez");
+                    nextBtn.classList.add('hidden'); retryBtn.classList.remove('hidden');
                 }
             }
             updateMenuUI();
@@ -556,8 +552,7 @@
 
         function retryLevel() { startLevel(state.currentUnit, state.currentLevel); }
         function goBack() {
-            stopTimer(); // 返回選單時停止計時
-            window.speechSynthesis.cancel();
+            stopTimer(); window.speechSynthesis.cancel();
             document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
             document.getElementById('game-header').classList.add('hidden');
             document.getElementById('menu-view').classList.remove('hidden');
@@ -566,15 +561,12 @@
 
         function goToNextLevel() {
             let nextLevel = state.currentLevel + 1;
-            const maxL = 3;
-            if (nextLevel > maxL) goBack();
-            else showInstruction(state.currentUnit, nextLevel);
+            if (nextLevel > 3) goBack(); else showInstruction(state.currentUnit, nextLevel);
         }
 
         function updateMenuUI() {
             ['A', 'B'].forEach(u => {
-                const maxL = 3;
-                for(let l=0; l<=maxL; l++) {
+                for(let l=0; l<=3; l++) {
                     const btn = document.getElementById(`btn-${u}-${l}`);
                     if (!btn) continue;
                     const isUnlocked = state.teacherMode || (state.unlocked[u] >= l);
@@ -583,8 +575,7 @@
                         if (l === 0) btn.className = "p-4 rounded-2xl bg-orange-100 text-orange-700 font-bold";
                         else btn.className = (u === 'A' ? "p-4 rounded-2xl bg-blue-100 text-blue-700 font-bold" : "p-4 rounded-2xl bg-purple-100 text-purple-700 font-bold");
                     } else {
-                        btn.className = "p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold";
-                        btn.disabled = true;
+                        btn.className = "p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold"; btn.disabled = true;
                     }
                 }
             });
@@ -595,15 +586,26 @@
             document.getElementById('compare-view').classList.remove('hidden');
             const preview = document.getElementById('user-draw-preview');
             preview.innerHTML = '';
-            const img = new Image();
-            img.src = canvas.toDataURL();
+            const img = new Image(); img.src = canvas.toDataURL();
             img.className = "w-full h-full object-contain p-2";
             preview.appendChild(img);
             document.getElementById('correct-text-preview').innerText = target;
         }
 
-        function retryWriting() { state.isRetrying = true; document.getElementById('compare-view').classList.add('hidden'); document.getElementById('level-view').classList.remove('hidden'); renderQuestion(); }
-        function proceedAfterCompare() { state.isRetrying = false; document.getElementById('compare-view').classList.add('hidden'); document.getElementById('level-view').classList.remove('hidden'); handleAnswer(true); }
+        function retryWriting() { 
+            // Nivel 3 點擊重試時，標記為 Retrying，這樣重新渲染畫布會出現描寫底字
+            state.isRetrying = true; 
+            document.getElementById('compare-view').classList.add('hidden'); 
+            document.getElementById('level-view').classList.remove('hidden'); 
+            renderQuestion(); 
+        }
+
+        function proceedAfterCompare() { 
+            state.isRetrying = false; 
+            document.getElementById('compare-view').classList.add('hidden'); 
+            document.getElementById('level-view').classList.remove('hidden'); 
+            handleAnswer(true); 
+        }
 
         function initCanvas(canvas, clearBtn) {
             const ctx = canvas.getContext('2d');
@@ -617,14 +619,13 @@
             canvas.ontouchstart = (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
             canvas.ontouchmove = (e) => { if(!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
             canvas.ontouchend = () => drawing = false;
-            clearBtn.onclick = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (clearBtn) clearBtn.onclick = () => ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
 
         function handleTeacherClick() {
             state.teacherClicks++;
             if (state.teacherClicks >= 3) {
-                state.teacherMode = !state.teacherMode;
-                state.teacherClicks = 0;
+                state.teacherMode = !state.teacherMode; state.teacherClicks = 0;
                 updateMenuUI();
                 document.getElementById('teacher-toggle').classList.toggle('opacity-50', state.teacherMode);
             }
