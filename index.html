@@ -40,14 +40,14 @@
             justify-content: center;
         }
 
-        /* 描寫底字樣式 - 調大字體 */
+        /* 描寫底字樣式 - 保持放大字體 */
         .tracing-overlay {
             position: absolute;
             inset: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10rem; /* 從 7rem 放大到 10rem */
+            font-size: 10rem;
             font-weight: bold;
             color: #f1f5f9; /* 極淺灰色，用於描寫 */
             pointer-events: none;
@@ -64,7 +64,7 @@
 
         /* 小螢幕調整 */
         @media (max-height: 700px) {
-            .tracing-overlay { font-size: 8rem; } /* 小螢幕也維持較大尺寸 */
+            .tracing-overlay { font-size: 8rem; }
             .text-6xl { font-size: 3.5rem; }
         }
 
@@ -214,7 +214,7 @@
 
     <script>
         const SYLLABLE_HINTS = {
-            'lila': 'lí la', 'ala': 'á la', 'ola': 'óla', 'pala': 'pá la', 'pelo': 'pé lo', 'lu': 'lú', 'pila': 'pí la', 'pipa': 'pí pa'
+            'lila': 'lí la', 'ala': 'á la', 'ola': 'ola', 'pala': 'pá la', 'pelo': 'pé lo', 'lu': 'lú', 'pila': 'pí la', 'pipa': 'pí pa'
         };
 
         const UNITS = {
@@ -230,10 +230,10 @@
         };
 
         const INSTRUCTIONS = {
-            0: { icon: '✍️', title: 'Mira y Traza', desc: '¡Vamos a dibujar las letras!' },
-            1: { icon: '👂', title: 'Escucha y Elige', desc: 'Presta mucha atención al sonido.' },
-            2: { icon: '📖', title: 'Mira y Elige', desc: 'Lee la palabra con cuidado.' },
-            3: { icon: '✍️', title: 'Escucha y Escribe', desc: '¡Escribe lo que escuchas!' }
+            0: { icon: '✍️', title: 'Mira y Traza', desc: '' },
+            1: { icon: '👂', title: 'Escucha y Elige', desc: '' },
+            2: { icon: '📖', title: 'Mira y Elige', desc: '' },
+            3: { icon: '✍️', title: 'Escucha y Escribe', desc: '' }
         };
 
         let state = {
@@ -480,6 +480,7 @@
         }
 
         function handleAnswer(isCorrect) {
+            const q = state.questions[state.currentIndex];
             if(isCorrect) {
                 state.stars++;
                 const encouragements = ["Muy bien", "Excelente", "Genial", "Bien hecho"];
@@ -495,7 +496,13 @@
                     }, 500);
                 });
             } else {
+                // 答錯邏輯優化：播放「Otra vez」後再放一次單字語音 (針對 Nivel 1, 2)
                 speak("Otra vez", () => {
+                    if (state.currentLevel === 1 || state.currentLevel === 2) {
+                        // 短暫延遲後再播一次單字
+                        setTimeout(() => speak(q.target), 500);
+                    }
+                    
                     document.querySelectorAll('[id^="opt-l-"]').forEach(opt => {
                         if (opt.classList.contains('selected-option')) {
                             opt.classList.remove('selected-option');
@@ -600,7 +607,7 @@
             const ctx = canvas.getContext('2d');
             const box = canvas.parentElement;
             canvas.width = box.offsetWidth; canvas.height = box.offsetHeight;
-            ctx.lineWidth = 12; // 稍微加粗線條以配合大字體
+            ctx.lineWidth = 12; 
             ctx.lineCap = 'round'; ctx.strokeStyle = '#1e293b';
             let drawing = false;
             function getPos(e) { 
