@@ -12,7 +12,17 @@
             font-family: 'Lexend', sans-serif;
             background-color: #f8fafc;
             touch-action: manipulation;
-            overflow: hidden;
+            overflow: hidden; 
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* 讓內容區塊自動填滿剩餘空間 */
+        .main-content {
+            height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .canvas-container {
@@ -22,22 +32,40 @@
             position: relative;
             touch-action: none;
             width: 100%;
+            flex-grow: 1;
+            max-height: 55vh; /* 增加高度以適應大字體 */
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* 描寫底字樣式 */
+        /* 描寫底字樣式 - 調大字體 */
         .tracing-overlay {
             position: absolute;
             inset: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 8rem;
+            font-size: 10rem; /* 從 7rem 放大到 10rem */
             font-weight: bold;
-            color: #f1f5f9; /* 極淺灰色 */
+            color: #f1f5f9; /* 極淺灰色，用於描寫 */
             pointer-events: none;
             user-select: none;
             z-index: 0;
             white-space: nowrap;
+        }
+
+        #main-canvas, #repaso-canvas {
+            position: relative;
+            z-index: 10;
+            background: transparent;
+        }
+
+        /* 小螢幕調整 */
+        @media (max-height: 700px) {
+            .tracing-overlay { font-size: 8rem; } /* 小螢幕也維持較大尺寸 */
+            .text-6xl { font-size: 3.5rem; }
         }
 
         .star-animation {
@@ -56,158 +84,132 @@
             transform: scale(1.02);
             box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.2);
         }
-
-        .instruction-card {
-            animation: slideIn 0.5s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-
-        .flashcard-enter {
-            animation: fadeInRight 0.4s ease-out;
-        }
-
-        @keyframes fadeInRight {
-            from { transform: translateX(30px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
     </style>
 </head>
-<body class="h-screen flex flex-col">
+<body class="flex flex-col h-full w-full">
 
     <!-- 頂部欄 / 進度條 -->
-    <header id="game-header" class="hidden p-4 bg-white shadow-sm border-b">
-        <div class="flex justify-between items-center mb-3">
+    <header id="game-header" class="hidden h-20 p-4 bg-white shadow-sm border-b shrink-0 z-20">
+        <div class="flex justify-between items-center mb-2">
             <button onclick="goBack()" class="text-blue-500 font-bold flex items-center">
-                <span>←</span> <span class="ml-1 text-sm md:text-base">Salir</span>
+                <span>←</span> <span class="ml-1 text-sm">Salir</span>
             </button>
-            <div class="flex items-center space-x-4">
-                <div id="timer-display" class="flex items-center text-blue-600 font-mono font-bold text-xl bg-blue-50 px-3 py-1 rounded-full">
-                    ⏱️ <span id="time-count" class="ml-1">0</span>s
+            <div class="flex items-center space-x-3">
+                <div id="timer-display" class="flex items-center text-blue-600 font-mono font-bold text-lg bg-blue-50 px-2 py-0.5 rounded-full">
+                    ⏱️ <span id="time-count">0</span>s
                 </div>
-                <div id="stars-display" class="flex items-center text-yellow-500 font-bold text-2xl">
-                    ⭐ <span id="star-count" class="ml-1">0</span>
+                <div id="stars-display" class="flex items-center text-yellow-500 font-bold text-xl">
+                    ⭐ <span id="star-count">0</span>
                 </div>
             </div>
         </div>
-        <div class="w-full bg-gray-100 rounded-full h-3">
-            <div id="progress-bar" class="bg-green-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+        <div class="w-full bg-gray-100 rounded-full h-2">
+            <div id="progress-bar" class="bg-green-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
         </div>
     </header>
 
     <!-- 主要內容區 -->
-    <main id="app" class="flex-grow flex flex-col items-center justify-center p-6 overflow-hidden">
+    <main id="app" class="flex-grow flex flex-col items-center justify-center p-4 overflow-hidden relative">
         
         <!-- 選單畫面 -->
-        <div id="menu-view" class="w-full max-w-md space-y-6 overflow-y-auto pb-10">
-            <div class="text-center py-4">
-                <h1 class="text-5xl font-bold text-blue-600 mb-2">¡Hola! ☺️</h1>
-                <p class="text-gray-500 text-lg">Elige una lección</p>
+        <div id="menu-view" class="w-full max-w-md h-full flex flex-col space-y-4 py-4">
+            <div class="text-center shrink-0">
+                <h1 class="text-4xl font-bold text-blue-600">¡Hola! ☺️</h1>
+                <p class="text-gray-500">Elige una lección</p>
             </div>
 
-            <div class="space-y-6">
-                <div class="bg-white p-6 rounded-3xl shadow-md border-b-8 border-blue-200">
-                    <h2 class="text-2xl font-bold text-blue-800 mb-4">Unidad A: a e i o u</h2>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="handleUnitClick('A', 0)" id="btn-A-0" class="p-4 rounded-2xl bg-orange-100 text-orange-600 font-bold">Nivel 0 (Repaso)</button>
-                        <button onclick="handleUnitClick('A', 1)" id="btn-A-1" class="p-4 rounded-2xl bg-blue-50 text-blue-600 font-bold">Nivel 1</button>
-                        <button onclick="handleUnitClick('A', 2)" id="btn-A-2" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 2</button>
-                        <button onclick="handleUnitClick('A', 3)" id="btn-A-3" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 3</button>
+            <div class="flex-grow overflow-y-auto space-y-4 px-1">
+                <div class="bg-white p-5 rounded-3xl shadow-md border-b-8 border-blue-200">
+                    <h2 class="text-xl font-bold text-blue-800 mb-3">Unidad A: a e i o u</h2>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="handleUnitClick('A', 0)" id="btn-A-0" class="p-3 rounded-xl bg-orange-100 text-orange-600 font-bold text-sm">Nivel 0 (Repaso)</button>
+                        <button onclick="handleUnitClick('A', 1)" id="btn-A-1" class="p-3 rounded-xl bg-blue-50 text-blue-600 font-bold text-sm">Nivel 1</button>
+                        <button onclick="handleUnitClick('A', 2)" id="btn-A-2" class="p-3 rounded-xl bg-gray-50 text-gray-300 font-bold text-sm">Nivel 2</button>
+                        <button onclick="handleUnitClick('A', 3)" id="btn-A-3" class="p-3 rounded-xl bg-gray-50 text-gray-300 font-bold text-sm">Nivel 3</button>
                     </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-3xl shadow-md border-b-8 border-purple-200">
-                    <h2 class="text-2xl font-bold text-purple-800 mb-4">Unidad B: p / l</h2>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="handleUnitClick('B', 0)" id="btn-B-0" class="p-4 rounded-2xl bg-orange-100 text-orange-600 font-bold">Nivel 0 (Repaso)</button>
-                        <button onclick="handleUnitClick('B', 1)" id="btn-B-1" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 1</button>
-                        <button onclick="handleUnitClick('B', 2)" id="btn-B-2" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 2</button>
-                        <button onclick="handleUnitClick('B', 3)" id="btn-B-3" class="p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold">Nivel 3</button>
+                <div class="bg-white p-5 rounded-3xl shadow-md border-b-8 border-purple-200">
+                    <h2 class="text-xl font-bold text-purple-800 mb-3">Unidad B: p / l</h2>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="handleUnitClick('B', 0)" id="btn-B-0" class="p-3 rounded-xl bg-orange-100 text-orange-600 font-bold text-sm">Nivel 0 (Repaso)</button>
+                        <button onclick="handleUnitClick('B', 1)" id="btn-B-1" class="p-3 rounded-xl bg-gray-50 text-gray-300 font-bold text-sm">Nivel 1</button>
+                        <button onclick="handleUnitClick('B', 2)" id="btn-B-2" class="p-3 rounded-xl bg-gray-50 text-gray-300 font-bold text-sm">Nivel 2</button>
+                        <button onclick="handleUnitClick('B', 3)" id="btn-B-3" class="p-3 rounded-xl bg-gray-50 text-gray-300 font-bold text-sm">Nivel 3</button>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- 指示畫面 -->
-        <div id="instruction-view" class="hidden w-full max-w-md instruction-card bg-white p-8 rounded-3xl shadow-xl border-t-8 border-blue-500 text-center space-y-6">
-            <div id="instruction-icon" class="text-6xl">👂</div>
-            <h3 id="instruction-title" class="text-3xl font-bold text-gray-800"></h3>
-            <p id="instruction-desc" class="hidden"></p>
-
-            <button onclick="startLevelFromInstruction()" class="w-full py-4 bg-blue-600 text-white rounded-full font-bold text-2xl shadow-lg active:scale-95 transition-transform">
+        <div id="instruction-view" class="hidden w-full max-w-md bg-white p-8 rounded-3xl shadow-xl border-t-8 border-blue-500 text-center flex flex-col justify-center space-y-8 my-auto">
+            <div id="instruction-icon" class="text-8xl">👂</div>
+            <div>
+                <h3 id="instruction-title" class="text-3xl font-bold text-gray-800"></h3>
+                <p id="instruction-desc" class="text-gray-500 mt-2"></p>
+            </div>
+            <button onclick="startLevelFromInstruction()" class="w-full py-5 bg-blue-600 text-white rounded-full font-bold text-2xl shadow-lg active:scale-95 transition-transform">
                 ¡Empezar!
             </button>
         </div>
 
         <!-- 遊戲關卡畫面 -->
-        <div id="level-view" class="hidden w-full max-w-md flex flex-col items-center h-full">
-            <div id="question-container" class="w-full flex flex-col items-center justify-center flex-grow space-y-6">
+        <div id="level-view" class="hidden w-full max-w-md h-full flex flex-col items-center justify-center">
+            <div id="question-container" class="w-full h-full flex flex-col items-center justify-center py-2 space-y-4">
                 <!-- 動態注入內容 -->
             </div>
         </div>
 
         <!-- 複習模式畫面 (Nivel 0) -->
-        <div id="repaso-view" class="hidden w-full max-w-md flex flex-col items-center h-full space-y-4">
-            <div id="flashcard-container" class="flex-grow flex flex-col items-center justify-center w-full space-y-4">
+        <div id="repaso-view" class="hidden w-full max-w-md h-full flex flex-col items-center justify-center space-y-4">
+            <div id="flashcard-container" class="flex-grow flex flex-col items-center justify-center w-full min-h-0">
                 <!-- 動態注入內容 -->
             </div>
-            <div class="w-full grid grid-cols-2 gap-3 pb-8">
-                <button onclick="clearRepasoCanvas()" class="py-4 bg-gray-200 text-gray-700 rounded-full font-bold text-xl">
-                    Borrar
-                </button>
-                <button onclick="nextFlashcard()" id="next-flashcard-btn" class="py-4 bg-orange-500 text-white rounded-full font-bold text-xl shadow-lg">
-                    Siguiente
-                </button>
+            <div class="w-full grid grid-cols-2 gap-3 pb-6 shrink-0">
+                <button onclick="clearRepasoCanvas()" class="py-4 bg-gray-200 text-gray-700 rounded-full font-bold text-lg">Borrar</button>
+                <button onclick="nextFlashcard()" id="next-flashcard-btn" class="py-4 bg-orange-500 text-white rounded-full font-bold text-lg shadow-lg">Siguiente</button>
             </div>
         </div>
 
         <!-- 寫字比對畫面 (L3) -->
-        <div id="compare-view" class="hidden w-full max-w-md flex flex-col items-center space-y-6">
-            <h3 class="text-2xl font-bold text-gray-700">Compara tu escritura:</h3>
-            <div class="w-full grid grid-cols-2 gap-4">
+        <div id="compare-view" class="hidden w-full max-w-md h-full flex flex-col items-center justify-center space-y-6">
+            <h3 class="text-xl font-bold text-gray-700 shrink-0">Compara tu escritura:</h3>
+            <div class="w-full grid grid-cols-2 gap-4 flex-grow items-center">
                 <div class="flex flex-col items-center">
-                    <span class="text-sm font-bold text-gray-400 mb-2 uppercase">Tu escrito</span>
+                    <span class="text-xs font-bold text-gray-400 mb-1 uppercase text-center">Tu escrito</span>
                     <div id="user-draw-preview" class="w-full aspect-square bg-white rounded-2xl border-2 border-gray-100 overflow-hidden"></div>
                 </div>
                 <div class="flex flex-col items-center">
-                    <span class="text-sm font-bold text-gray-400 mb-2 uppercase">Correcto</span>
-                    <div id="correct-text-preview" class="w-full aspect-square bg-blue-50 rounded-2xl border-2 border-blue-100 flex items-center justify-center text-6xl font-bold text-blue-600"></div>
+                    <span class="text-xs font-bold text-gray-400 mb-1 uppercase text-center">Correcto</span>
+                    <div id="correct-text-preview" class="w-full aspect-square bg-blue-50 rounded-2xl border-2 border-blue-100 flex items-center justify-center text-5xl font-bold text-blue-600"></div>
                 </div>
             </div>
-            <div class="flex flex-col space-y-3 w-full">
-                <button onclick="proceedAfterCompare()" class="w-full py-5 bg-green-500 text-white rounded-full font-bold text-2xl shadow-lg">
-                    Siguiente
-                </button>
-                <button onclick="retryWriting()" class="w-full py-4 bg-white text-blue-600 border-2 border-blue-600 rounded-full font-bold text-xl">
-                    Reintentar
-                </button>
+            <div class="flex flex-col space-y-3 w-full pb-6 shrink-0">
+                <button onclick="proceedAfterCompare()" class="w-full py-4 bg-green-500 text-white rounded-full font-bold text-xl shadow-lg">Siguiente</button>
+                <button onclick="retryWriting()" class="w-full py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-full font-bold text-lg">Reintentar</button>
             </div>
         </div>
 
         <!-- 完成畫面 -->
-        <div id="complete-view" class="hidden text-center space-y-6">
-            <div id="result-medal" class="bg-yellow-400 w-32 h-32 rounded-full flex items-center justify-center text-6xl shadow-xl mx-auto mb-4 star-animation">🏅</div>
+        <div id="complete-view" class="hidden text-center flex flex-col items-center justify-center h-full space-y-6">
+            <div id="result-medal" class="bg-yellow-400 w-28 h-28 rounded-full flex items-center justify-center text-5xl shadow-xl star-animation">🏅</div>
             <div>
-                <h2 id="result-title" class="text-4xl font-bold text-gray-800 mb-1">¡Excelente! ☺️</h2>
-                <div class="flex flex-col items-center justify-center space-y-1">
-                    <p id="result-score" class="text-xl text-gray-600 font-bold"></p>
-                    <p id="result-time" class="text-lg text-blue-600 font-bold bg-blue-50 px-4 py-1 rounded-full border border-blue-100"></p>
+                <h2 id="result-title" class="text-3xl font-bold text-gray-800 mb-1">¡Excelente! ☺️</h2>
+                <div class="flex flex-col items-center space-y-1">
+                    <p id="result-score" class="text-lg text-gray-600 font-bold"></p>
+                    <p id="result-time" class="text-md text-blue-600 font-bold bg-blue-50 px-4 py-1 rounded-full"></p>
                 </div>
             </div>
-            <div id="complete-actions" class="flex flex-col space-y-3 w-64 mx-auto">
-                <button id="next-level-btn" onclick="goToNextLevel()" class="px-8 py-4 bg-blue-600 text-white rounded-full font-bold text-xl shadow-lg">Siguiente Nivel</button>
-                <button id="retry-btn" onclick="retryLevel()" class="hidden px-8 py-4 bg-orange-500 text-white rounded-full font-bold text-xl shadow-lg">Otra vez</button>
-                <button onclick="goBack()" class="px-8 py-4 bg-white text-gray-600 border rounded-full font-bold text-lg">Ir al Menú</button>
+            <div class="flex flex-col space-y-3 w-64">
+                <button id="next-level-btn" onclick="goToNextLevel()" class="px-8 py-4 bg-blue-600 text-white rounded-full font-bold text-lg shadow-lg">Siguiente Nivel</button>
+                <button id="retry-btn" onclick="retryLevel()" class="hidden px-8 py-4 bg-orange-500 text-white rounded-full font-bold text-lg shadow-lg">Otra vez</button>
+                <button onclick="goBack()" class="px-8 py-3 bg-white text-gray-600 border rounded-full font-bold text-md">Ir al Menú</button>
             </div>
         </div>
     </main>
 
-    <!-- 教師模式切換 -->
-    <div class="fixed bottom-6 right-6">
-        <button onclick="handleTeacherClick()" id="teacher-toggle" class="bg-white p-3 rounded-full shadow-md border opacity-10 hover:opacity-50 transition-opacity">⚙️</button>
+    <div class="fixed bottom-4 right-4">
+        <button onclick="handleTeacherClick()" id="teacher-toggle" class="bg-white p-2 rounded-full shadow-md border opacity-5 hover:opacity-30">⚙️</button>
     </div>
 
     <script>
@@ -229,9 +231,9 @@
 
         const INSTRUCTIONS = {
             0: { icon: '✍️', title: 'Mira y Traza', desc: '¡Vamos a dibujar las letras!' },
-            1: { icon: '👂', title: 'Escucha y Elige', desc: '' },
-            2: { icon: '📖', title: 'Mira y Elige', desc: '' },
-            3: { icon: '✍️', title: 'Escucha y Escribe', desc: '' }
+            1: { icon: '👂', title: 'Escucha y Elige', desc: 'Presta mucha atención al sonido.' },
+            2: { icon: '📖', title: 'Mira y Elige', desc: 'Lee la palabra con cuidado.' },
+            3: { icon: '✍️', title: 'Escucha y Escribe', desc: '¡Escribe lo que escuchas!' }
         };
 
         let state = {
@@ -246,7 +248,7 @@
             selectedOption: null,
             voices: { male: null, female: null },
             voiceToggle: true,
-            isRetrying: false, // 用於 Nivel 3 是否啟動描寫引導
+            isRetrying: false,
             timer: null,
             seconds: 0,
             repasoCanvasCtx: null
@@ -258,7 +260,6 @@
         }
 
         function stopTimer() { if (state.timer) clearInterval(state.timer); state.timer = null; }
-
         function updateTimerUI() {
             const timerEl = document.getElementById('time-count');
             if (timerEl) timerEl.innerText = state.seconds;
@@ -285,7 +286,7 @@
                 ut.voice = state.voiceToggle ? state.voices.female : state.voices.male;
                 state.voiceToggle = !state.voiceToggle;
             }
-            ut.lang = 'es-ES'; ut.rate = 0.65;
+            ut.lang = 'es-ES'; ut.rate = 0.6;
             if (callback) ut.onend = () => callback();
             window.speechSynthesis.speak(ut);
         }
@@ -303,9 +304,7 @@
             const ins = INSTRUCTIONS[level];
             document.getElementById('instruction-icon').innerText = ins.icon;
             document.getElementById('instruction-title').innerText = ins.title;
-            const descEl = document.getElementById('instruction-desc');
-            if (ins.desc) { descEl.innerText = ins.desc; descEl.classList.remove('hidden'); } 
-            else { descEl.classList.add('hidden'); }
+            document.getElementById('instruction-desc').innerText = ins.desc;
             speak(ins.title);
         }
 
@@ -329,15 +328,15 @@
             const container = document.getElementById('flashcard-container');
             
             container.innerHTML = `
-                <div class="flashcard-enter text-center w-full flex flex-col items-center">
-                    <div class="flex items-center space-x-6 mb-2">
-                        <div class="text-6xl">${item.icon}</div>
+                <div class="text-center w-full flex flex-col items-center justify-center h-full">
+                    <div class="flex items-center justify-center space-x-4 mb-2 shrink-0">
+                        ${item.icon ? `<div class="text-6xl">${item.icon}</div>` : ''}
                         <button onclick="speak('${item.word}')" class="w-16 h-16 bg-blue-100 rounded-full text-2xl shadow-inner active:scale-90 transition-transform">🔊</button>
                     </div>
-                    <p class="text-sm font-bold text-gray-400 mb-2 uppercase">Traza la palabra:</p>
-                    <div class="w-full aspect-[4/3] canvas-container shadow-inner">
+                    <p class="text-xs font-bold text-gray-400 mb-2 uppercase shrink-0">Traza la palabra:</p>
+                    <div class="canvas-container shadow-inner">
                         <div class="tracing-overlay">${item.word}</div>
-                        <canvas id="repaso-canvas" class="relative z-10"></canvas>
+                        <canvas id="repaso-canvas" class="relative z-10 w-full h-full"></canvas>
                     </div>
                 </div>
             `;
@@ -350,7 +349,7 @@
                 initCanvas(canvas);
                 state.repasoCanvasCtx = canvas.getContext('2d');
                 speak(item.word);
-            }, 100);
+            }, 50);
 
             const nextBtn = document.getElementById('next-flashcard-btn');
             nextBtn.innerText = (state.currentIndex === state.questions.length - 1) ? "¡Terminar!" : "Siguiente";
@@ -399,13 +398,12 @@
             document.getElementById('star-count').innerText = state.stars;
 
             if (state.currentLevel === 1 || state.currentLevel === 2) {
-                const soundBtn = createSoundBtn(q.target, 'w-32 h-32 bg-blue-500 text-5xl');
-                const confirmBtn = createConfirmBtn(() => {
-                    const isCorrect = state.selectedOption === q.target;
-                    handleAnswer(isCorrect);
-                });
+                const content = document.createElement('div');
+                content.className = "flex-grow flex flex-col items-center justify-center w-full space-y-10";
+                
+                const soundBtn = createSoundBtn(q.target, 'w-28 h-28 bg-blue-500 text-5xl');
                 const grid = document.createElement('div');
-                grid.className = "grid grid-cols-2 gap-4 w-full mb-6";
+                grid.className = "grid grid-cols-2 gap-4 w-full";
                 const options = [q.target, q.distractor].sort(() => Math.random() - 0.5);
                 options.forEach((opt, i) => {
                     const btn = document.createElement('button');
@@ -418,18 +416,22 @@
                     };
                     grid.appendChild(btn);
                 });
-                container.appendChild(soundBtn); container.appendChild(grid); container.appendChild(confirmBtn);
+                
+                const confirmBtn = createConfirmBtn(() => handleAnswer(state.selectedOption === q.target));
+                content.appendChild(soundBtn); content.appendChild(grid);
+                container.appendChild(content); container.appendChild(confirmBtn);
                 speak(q.target);
             } else if (state.currentLevel === 3) {
+                const mainArea = document.createElement('div');
+                mainArea.className = "flex-grow flex flex-col items-center justify-center w-full space-y-4";
+
                 const headerRow = document.createElement('div');
-                headerRow.className = "flex items-center justify-center space-x-6 mb-4";
-                const soundBtn = createSoundBtn(q.target, 'w-24 h-24 bg-purple-500 text-4xl');
-                headerRow.appendChild(soundBtn);
+                headerRow.className = "flex items-center justify-center space-x-6 shrink-0";
+                headerRow.appendChild(createSoundBtn(q.target, 'w-16 h-16 bg-purple-500 text-2xl'));
                 
                 const canvasBox = document.createElement('div');
-                canvasBox.className = "w-full aspect-[4/3] canvas-container mb-4 shadow-inner";
+                canvasBox.className = "canvas-container shadow-inner w-full";
                 
-                // Nivel 3 的描寫邏輯：如果是在重試狀態，顯示底色字
                 if (state.isRetrying) {
                     const overlay = document.createElement('div');
                     overlay.className = "tracing-overlay";
@@ -441,11 +443,14 @@
                 canvasBox.appendChild(canvas);
                 
                 const controls = document.createElement('div');
-                controls.className = "flex space-x-4 w-full";
+                controls.className = "flex space-x-4 w-full shrink-0 pb-4";
                 const clearBtn = createUtilityBtn("Borrar", () => {});
                 const nextBtn = createUtilityBtn("Listo", () => showComparison(canvas, q.target), true);
-                container.appendChild(headerRow); container.appendChild(canvasBox);
                 controls.appendChild(clearBtn); controls.appendChild(nextBtn);
+                
+                mainArea.appendChild(headerRow);
+                mainArea.appendChild(canvasBox);
+                container.appendChild(mainArea);
                 container.appendChild(controls);
                 
                 setTimeout(() => initCanvas(canvas, clearBtn), 50);
@@ -462,7 +467,7 @@
 
         function createConfirmBtn(fn) {
             const btn = document.createElement('button');
-            btn.className = "w-full py-5 bg-green-500 text-white rounded-full font-bold text-2xl shadow-lg opacity-50";
+            btn.className = "w-full py-6 bg-green-500 text-white rounded-full font-bold text-2xl shadow-lg opacity-50 shrink-0 mb-6";
             btn.innerText = "Confirmar"; btn.disabled = true; btn.onclick = fn;
             return btn;
         }
@@ -479,38 +484,27 @@
                 state.stars++;
                 const encouragements = ["Muy bien", "Excelente", "Genial", "Bien hecho"];
                 const msg = encouragements[Math.floor(Math.random() * encouragements.length)];
-                
                 const icon = document.createElement('div');
-                icon.className = "fixed inset-0 flex flex-col items-center justify-center pointer-events-none z-50";
-                icon.innerHTML = `<div class="text-9xl mb-4 star-animation">☺️</div><div class="bg-white/80 px-6 py-2 rounded-full text-4xl font-bold text-blue-600 shadow-xl star-animation">${msg}</div>`;
+                icon.className = "fixed inset-0 flex flex-col items-center justify-center pointer-events-none z-50 bg-white/20";
+                icon.innerHTML = `<div class="text-9xl mb-4 star-animation">☺️</div><div class="bg-white px-8 py-3 rounded-full text-4xl font-bold text-blue-600 shadow-2xl star-animation border-4 border-blue-100">${msg}</div>`;
                 document.body.appendChild(icon);
-                
                 speak(msg, () => {
                     setTimeout(() => {
-                        icon.remove();
-                        state.currentIndex++;
-                        if(state.currentIndex >= 10) { stopTimer(); showCompletion(); }
-                        else renderQuestion();
+                        icon.remove(); state.currentIndex++;
+                        if(state.currentIndex >= 10) { stopTimer(); showCompletion(); } else renderQuestion();
                     }, 500);
                 });
             } else {
-                // Nivel 1 & 2 答錯：播放 otra vez，但不跳題，原地重答
                 speak("Otra vez", () => {
-                    // 答錯視覺反饋（選單震動效果）
-                    const activeOptions = document.querySelectorAll('[id^="opt-l-"]');
-                    activeOptions.forEach(opt => {
+                    document.querySelectorAll('[id^="opt-l-"]').forEach(opt => {
                         if (opt.classList.contains('selected-option')) {
                             opt.classList.remove('selected-option');
                             opt.classList.add('border-red-500', 'bg-red-50');
-                            setTimeout(() => opt.classList.remove('border-red-500', 'bg-red-50'), 1000);
+                            setTimeout(() => opt.classList.remove('border-red-500', 'bg-red-50'), 800);
                         }
                     });
-                    // 重置確認按鈕狀態讓孩子重選
                     const confirmBtn = document.querySelector('button.bg-green-500');
-                    if (confirmBtn) {
-                        confirmBtn.disabled = true;
-                        confirmBtn.classList.add('opacity-50');
-                    }
+                    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.classList.add('opacity-50'); }
                     state.selectedOption = null;
                 });
             }
@@ -521,29 +515,25 @@
             document.getElementById('game-header').classList.add('hidden');
             document.getElementById('complete-view').classList.remove('hidden');
             const scoreDisplay = document.getElementById('result-score');
-            const timeDisplay = document.getElementById('result-time');
             const medal = document.getElementById('result-medal');
-            const titleDisplay = document.getElementById('result-title');
             const nextBtn = document.getElementById('next-level-btn');
             const retryBtn = document.getElementById('retry-btn');
-
-            timeDisplay.innerText = `⏱️ Tiempo: ${state.seconds}s`;
+            document.getElementById('result-time').innerText = `⏱️ Tiempo: ${state.seconds}s`;
 
             if (state.currentLevel === 0) {
-                const finishMsg = "¡Has terminado el repaso!";
-                scoreDisplay.innerText = finishMsg; medal.innerText = "📖";
-                speak(finishMsg); nextBtn.classList.remove('hidden'); retryBtn.classList.add('hidden');
+                scoreDisplay.innerText = "¡Terminado!"; medal.innerText = "📖";
+                speak("¡Has terminado!"); nextBtn.classList.remove('hidden'); retryBtn.classList.add('hidden');
             } else {
                 scoreDisplay.innerText = `Puntaje: ${state.stars} / 10`;
                 if(state.stars >= 6) {
-                    titleDisplay.innerText = "¡Excelente! ☺️"; medal.innerText = "🏅"; speak("Excelente");
+                    medal.innerText = "🏅"; speak("Excelente");
                     nextBtn.classList.remove('hidden'); retryBtn.classList.add('hidden');
                     if(state.stars >= 8) {
                         if(state.currentLevel < 3) state.unlocked[state.currentUnit] = Math.max(state.unlocked[state.currentUnit], state.currentLevel + 1);
                         else if(state.currentUnit === 'A') state.unlocked.B = Math.max(state.unlocked.B, 0); 
                     }
                 } else {
-                    titleDisplay.innerText = "¡Otra vez! 💪"; medal.innerText = "💪"; speak("Otra vez");
+                    medal.innerText = "💪"; speak("Otra vez");
                     nextBtn.classList.add('hidden'); retryBtn.classList.remove('hidden');
                 }
             }
@@ -560,8 +550,8 @@
         }
 
         function goToNextLevel() {
-            let nextLevel = state.currentLevel + 1;
-            if (nextLevel > 3) goBack(); else showInstruction(state.currentUnit, nextLevel);
+            let nl = state.currentLevel + 1;
+            if (nl > 3) goBack(); else showInstruction(state.currentUnit, nl);
         }
 
         function updateMenuUI() {
@@ -572,10 +562,10 @@
                     const isUnlocked = state.teacherMode || (state.unlocked[u] >= l);
                     if (isUnlocked) {
                         btn.disabled = false;
-                        if (l === 0) btn.className = "p-4 rounded-2xl bg-orange-100 text-orange-700 font-bold";
-                        else btn.className = (u === 'A' ? "p-4 rounded-2xl bg-blue-100 text-blue-700 font-bold" : "p-4 rounded-2xl bg-purple-100 text-purple-700 font-bold");
+                        if (l === 0) btn.className = "p-3 rounded-xl bg-orange-100 text-orange-700 font-bold text-sm";
+                        else btn.className = (u === 'A' ? "p-3 rounded-xl bg-blue-100 text-blue-700 font-bold text-sm" : "p-3 rounded-xl bg-purple-100 text-purple-700 font-bold text-sm");
                     } else {
-                        btn.className = "p-4 rounded-2xl bg-gray-50 text-gray-300 font-bold"; btn.disabled = true;
+                        btn.className = "p-3 rounded-xl bg-gray-50 text-gray-300 font-bold text-sm"; btn.disabled = true;
                     }
                 }
             });
@@ -593,7 +583,6 @@
         }
 
         function retryWriting() { 
-            // Nivel 3 點擊重試時，標記為 Retrying，這樣重新渲染畫布會出現描寫底字
             state.isRetrying = true; 
             document.getElementById('compare-view').classList.add('hidden'); 
             document.getElementById('level-view').classList.remove('hidden'); 
@@ -609,10 +598,17 @@
 
         function initCanvas(canvas, clearBtn) {
             const ctx = canvas.getContext('2d');
-            canvas.width = canvas.parentElement.offsetWidth; canvas.height = canvas.parentElement.offsetHeight;
-            ctx.lineWidth = 10; ctx.lineCap = 'round'; ctx.strokeStyle = '#1e293b';
+            const box = canvas.parentElement;
+            canvas.width = box.offsetWidth; canvas.height = box.offsetHeight;
+            ctx.lineWidth = 12; // 稍微加粗線條以配合大字體
+            ctx.lineCap = 'round'; ctx.strokeStyle = '#1e293b';
             let drawing = false;
-            function getPos(e) { const b = canvas.getBoundingClientRect(); const x = (e.touches ? e.touches[0].clientX : e.clientX) - b.left; const y = (e.touches ? e.touches[0].clientY : e.clientY) - b.top; return {x, y}; }
+            function getPos(e) { 
+                const b = canvas.getBoundingClientRect(); 
+                const x = (e.touches ? e.touches[0].clientX : e.clientX) - b.left; 
+                const y = (e.touches ? e.touches[0].clientY : e.clientY) - b.top; 
+                return {x, y}; 
+            }
             canvas.onmousedown = (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
             canvas.onmousemove = (e) => { if(!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
             window.onmouseup = () => drawing = false;
@@ -627,7 +623,7 @@
             if (state.teacherClicks >= 3) {
                 state.teacherMode = !state.teacherMode; state.teacherClicks = 0;
                 updateMenuUI();
-                document.getElementById('teacher-toggle').classList.toggle('opacity-50', state.teacherMode);
+                document.getElementById('teacher-toggle').classList.toggle('opacity-30', state.teacherMode);
             }
         }
         updateMenuUI();
