@@ -251,31 +251,84 @@
             if (timerEl) timerEl.innerText = state.seconds;
         }
 
-        function loadVoices() {
-            const v = window.speechSynthesis.getVoices();
-            const es = v.filter(voice => voice.lang.includes('es'));
-            state.voices.female = es.find(voice => voice.name.includes('Monica') || voice.name.includes('Paulina') || voice.name.includes('Google') || voice.name.includes('Helena')) || es[0];
-            state.voices.male = es.find(voice => voice.name.includes('Jorge') || (voice.name.includes('Google') && !voice.name.includes('female'))) || es[es.length - 1];
-        }
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-        loadVoices();
+        
+        
+const AUDIO_BASE = "https://zihying5.github.io/aprendo-a-leer-01/audio/";
 
-        function speak(text, callback) {
-            if (!text) return;
-            window.speechSynthesis.cancel();
-            const lowerText = text.toLowerCase();
-            const processedText = SYLLABLE_HINTS[lowerText] || text;
-            const ut = new SpeechSynthesisUtterance(processedText);
-            if (['lu', 'lo', 'ala', 'ola', 'pila', 'pipa'].includes(lowerText)) {
-                ut.voice = state.voices.male;
-            } else {
-                ut.voice = state.voiceToggle ? state.voices.female : state.voices.male;
-                state.voiceToggle = !state.voiceToggle;
-            }
-            ut.lang = 'es-ES'; ut.rate = 0.6;
-            if (callback) ut.onend = () => callback();
-            window.speechSynthesis.speak(ut);
-        }
+const AUDIO_MAP = {
+    // 單字
+    "a": "a",
+    "e": "e",
+    "i": "i",
+    "o": "o",
+    "u": "u",
+
+    // 單詞
+    "ala": "ala",
+    "ola": "ola",
+    "lila": "lila",
+    "pa": "pa",
+    "pe": "pe",
+    "pi": "pi",
+    "po": "po",
+    "pu": "pu",
+    "la": "la",
+    "le": "le",
+    "li": "li",
+    "lo": "lo",
+    "lu": "lu",
+    "pala": "pala",
+    "pelo": "pelo",
+    "pila": "pila",
+    "pipa": "pipa",
+
+    // 系統語音（注意空格 vs 底線）
+    "muy bien": "muy_bien",
+    "excelente": "excelente",
+    "genial": "genial",
+    "bien hecho": "bien_hecho",
+    "otra vez": "otra_vez",
+    "has terminado": "has_terminado",
+
+    "escucha y elige": "escucha_y_elige",
+    "escucha y escribe": "escucha_y_escribe",
+    "mira y traza": "mira_y_traza"
+};
+
+function speak(text, callback) {
+    if (!text) return;
+
+    // 正規化文字（超重要）
+    let key = text.toLowerCase().trim();
+
+    // 去掉重音（避免 á é í 問題）
+    key = key.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    const fileName = AUDIO_MAP[key];
+
+    // ❗ 如果沒有音檔 → fallback（不讓系統卡住）
+    if (!fileName) {
+        console.warn("沒有音檔，略過：", text);
+        if (callback) callback();
+        return;
+    }
+
+    const audio = new Audio(`${AUDIO_BASE}${fileName}.mp3`);
+
+    audio.onended = () => {
+        if (callback) callback();
+    };
+
+    audio.onerror = () => {
+        console.error("音檔載入失敗:", fileName);
+        if (callback) callback();
+    };
+
+    audio.play().catch(err => {
+        console.error("播放失敗:", err);
+        if (callback) callback();
+    });
+}
 
         function handleUnitClick(unit, level) {
             const isUnlocked = state.teacherMode || (state.unlocked[unit] >= level);
